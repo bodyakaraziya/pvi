@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PVI_lab01</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="left-part">
+            <button class="burger">☰</button>
+            <a href="student.html" class="logo">CMS</a>
+        </div>
+        
+        <div class="header-controls">
+
+            <div class="notification-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bell-icon"
+                    viewBox="0 0 16 16">
+                    <path
+                        d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6" />
+                </svg>
+                <span class="notification-indicator"></span>
+
+                <div class="notification-dropdown">
+                    <ul class="notification-list">
+                        <li class="notification-item">
+                            <img src="image/avatar.jpg" alt="Avatar" class="other-avatar-image">
+                            <div class="user-block">
+                                <span class="notification-name">Daryna</span>
+                                <p class="notification-text">Lorem ipsum dolor sit amet elit.</p>
+                            </div>
+                        </li>
+                        <li class="notification-item">
+                            <img src="image/avatar.jpg" alt="Avatar" class="other-avatar-image">
+                            <div class="user-block">
+                                <span class="notification-name">Admin</span>
+                                <p class="notification-text">Lorem ipsum dolor sit amet elit.</p>
+                            </div>
+                        </li>
+                        <li class="notification-item">
+                            <img src="image/avatar.jpg" alt="Avatar" class="other-avatar-image">
+                            <div class="user-block">
+                                <span class="notification-name">Ivan</span>
+                                <p class="notification-text">Lorem ipsum dolor sit amet elit.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="user-profile">
+                <img src="image/avatar.jpg" alt="User Avatar" class="avatar-image">
+                <span class="user-name">Bohdan Karaziia</span>
+
+                <div class="user-dropdown">
+                    <ul class="user-dropdown-list">
+                        <li><a href="#">Profile</a></li>
+                        <li><a href="#">LogOut</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <nav class="sidebar">
+            <ul class="nav-list">
+                <li><a href="index.html">Dashboard</a></li>
+                <li><a href="student.html" class="active">Students</a></li>
+                <li><a href="task.html">Tasks</a></li>
+            </ul>
+        </nav>
+
+        <main class="student-content">
+            <h1 class="title">Students</h1> 
+            <div class="button-on-table">
+                <button class="btn-add">+</button>
+                <button class="btn-delete-all">Delete</button>
+            </div>    
+            <div class="table-wrapper">
+                <table class="students-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="select-all">
+                            </th>
+                            <th>Group</th>
+                            <th>Name</th>
+                            <th>Gender</th>
+                            <th>Birthday</th>
+                            <th>Status</th>
+                            <th>Options</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-table-body">
+                        <tr data-id="1">
+                            <td>
+                                <input type="checkbox" class="select-student">
+                            </td>
+                            <td>PZ-22</td>
+                            <td>Bohdan Karaziia</td>
+                            <td>M</td>
+                            <td>12.06.2007</td>
+                            <td>
+                                <span class="status status--online status--offline"></span>
+                            </td>
+                            <td>
+                                <button class="btn-edit">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="edit-icon"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325" />
+                                    </svg>
+                                </button>
+                                <button class="btn-delete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="delete-icon" viewBox="0 0 16 16">
+                                        <path
+                                            d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708" />
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr data-id="2">
+                            <td>
+                                <input type="checkbox" class="select-student">
+                            </td>
+                            <td>PZ-22</td>
+                            <td>Daryna</td>
+                            <td>F</td>
+                            <td>28.11.2006</td>
+                            <td>
+                                <span class="status status--online status--offline"></span>
+                            </td>
+                            <td>
+                                <button class="btn-edit">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="edit-icon"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325" />
+                                    </svg>
+                                </button>
+                                <button class="btn-delete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="delete-icon"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708" />
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr data-id="3">
+                            <td>
+                                <input type="checkbox" class="select-student">
+                            </td>
+                            <td>PZ-22</td>
+                            <td>Ivan</td>
+                            <td>M</td>
+                            <td>03.09.2007</td>
+                            <td>
+                                <span class="status status--online status--offline"></span>
+                            </td>
+                            <td>
+                                <button class="btn-edit">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="edit-icon"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325" />
+                                    </svg>
+                                </button>
+                                <button class="btn-delete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="delete-icon"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708" />
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button class="page-btn">&lt;</button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <button class="page-btn">4</button>
+                <button class="page-btn">&gt;</button>
+            </div>
+        </main>
+    </div>
+
+
+
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h2 class="modal-title">Add student</h2>
+                <button class="btn-close" id="close-add-modal">&times;</button>
+            </div>
+           <div class="modal-body">
+                <form action="" id="add-student-form">
+                    <div class="form-group">
+                        <label for="group">Group</label>
+                        <select id="group" class="form-control" required>
+                            <option value="" disabled selected required>Select Group</option>
+                            <option value="PZ-21">PZ-21</option>
+                            <option value="PZ-22">PZ-22</option>
+                            <option value="PZ-23">PZ-23</option>
+                            <option value="PZ-24">PZ-24</option>
+                            <option value="PZ-25">PZ-25</option>
+                            <option value="PZ-26">PZ-26</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="first-name">First Name</label>
+                        <input type="text" id="first-name" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="last-name">Last Name</label>
+                        <input type="text" id="last-name" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <select id="gender" class="form-control">
+                            <option value="" disabled selected required>Select Gender</option>  
+                            <option value="M">Male</option> 
+                            <option value="F">Female</option>
+                        </select>   
+                    </div>
+
+                    <div class="form-group">
+                        <label for="birthday">Birthday</label>
+                        <input type="date" id="birthday" class="form-control" required>
+                    </div>
+                </form>
+           </div>
+           <div class="modal-footer">
+                <button class="btn-cancel" id="cancel-add">Cancel</button>
+                <button type="submit" form="add-student-form" class="btn-create" data-mode="create">Create</button>
+           </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h2 class="modal-title">Warning</h2>
+                <button class="btn-close" id="close-delete-modal">&times;</button>
+            </div>
+           <div class="modal-body">
+                <p>Are you sure you want to delete <span id="delete-user-name">USER</span>?</p>
+           </div>
+           <div class="modal-footer">
+                <button class="modal-btn-cancel" id="cancel-delete">Cancel</button>
+                <button class="modal-btn-delete" id="confirm-delete">Ok</button>
+           </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+
+</html>

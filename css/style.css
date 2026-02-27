@@ -1,0 +1,704 @@
+/* Скидання базових відступів браузера */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: sans-serif;
+    /* overflow-x: hidden; */
+    /*outline: 1px solid red; /* Для візуалізації меж елементів під час розробки */
+}
+
+body {
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+button:active{
+    transform: scale(0.95);
+}
+
+/*------------------------------------------------------------*/
+/* Оформлення верхньої панелі */
+/*------------------------------------------------------------*/
+
+.main-header {
+    background-color: #adb5bd;
+    color: white;
+    width: 100%;
+    /* max-width: 100vw; */
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 20px;
+    height: 60px;
+}
+
+.left-part {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.burger {
+    display: none; /* Сховано за замовчуванням, показуємо лише на мобільних пристроях */
+    font-size: 1.5rem;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.logo {
+    position: relative;
+    margin-left: 0;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: white;
+    text-decoration: none;
+}
+
+.header-controls{
+    display: flex;
+    justify-content: space-between;
+}
+
+.notification-wrapper {
+    position: relative; /* Для розташування індикатора поверх іконки дзвінка */
+    height: 25px;
+}
+
+.bell-icon {
+    margin-right: 20px;
+    height: 20px;
+    width: 25px;
+    cursor: pointer;
+}
+
+.bell-icon:hover{
+    filter: brightness(0.9); /* Злегка затемнюємо іконку при наведенні */
+}
+
+.bell-icon:active{
+    filter: brightness(0.8); /* Більш сильне затемнення при натисканні */
+    transform: scale(0.95);
+}
+
+.notification-indicator{
+    position: absolute; /* Розташування індикатора поверх іконки дзвінка */
+    background: red;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    top: 0px;
+    right: 23px;
+    cursor: pointer;
+}
+
+@keyframes ring {
+    0% { transform: rotate(0); }
+    10% { transform: rotate(15deg); }
+    20% { transform: rotate(-10deg); }
+    30% { transform: rotate(5deg); }
+    40% { transform: rotate(-5deg); }
+    50% { transform: rotate(0); }
+    100% { transform: rotate(0); }
+}
+
+.ringing {
+    animation: ring 1.5s ease-in-out infinite;
+    transform-origin: top center;
+}
+
+/*------------------------------------------------------------*/
+/* Оформлення випадаючого меню повідомлень */
+/*------------------------------------------------------------*/
+
+.notification-dropdown {
+    display: none; /* Сховано за замовчуванням */
+    position: absolute;
+    top: 100%; /* Розташування під іконкою дзвінка */
+    left: -100px;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    width: 302px;
+    padding: 10px;
+    z-index: 1000; /* Розташування поверх іншого контенту */
+}
+
+.notification-wrapper:hover .notification-dropdown {
+    display: block; 
+}
+
+.notification-list{
+    list-style: none;
+    color: black;
+}
+
+.notification-item{
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    transition: background-color 0.2s ease; 
+}
+
+.user-block{
+    display: flex;
+    min-width: 50px;
+    flex-direction: column;
+    margin-left: 10px;
+    padding: 5px;
+    overflow: hidden;
+}
+
+.other-avatar-image {
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+    cursor: pointer;
+}
+
+.notification-name{
+    padding: 2px;
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.notification-text{
+    display: -webkit-box;
+    line-clamp: 1;
+    -webkit-line-clamp: 1; 
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    padding: 2px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    background-color: #f1f3f5;
+    border-radius: 6px;
+    line-height: 1.4;
+}
+
+/*------------------------------------------------------------*/
+/* Оформлення профілю користувача */
+/*------------------------------------------------------------*/
+
+.user-profile{
+    display: flex;
+    position: relative; /* Для розташування випадаючого меню */
+    align-items: center;
+    height: 40px;
+    bottom: 10px;
+}
+
+.avatar-image {
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    border: 2px solid #31d79d;
+    cursor: pointer;
+}
+
+.user-name {
+    margin-left: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.user-dropdown {
+    display: none; /* Сховано за замовчуванням */
+    position: absolute;
+    top: 100%; /* Розташування під верхньою панеллю */
+    right: -20px; 
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    width: 150px;
+    padding: 10px;
+    z-index: 1000; /* Розташування поверх іншого контенту */
+}
+
+.user-profile:hover .user-dropdown{
+    display: block; /* Показуємо випадаюче меню при наведенні на профіль користувача */
+}
+
+.user-dropdown-list{
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.user-dropdown-list li {
+    margin: 10px 0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.user-dropdown-list li:hover {
+    background-color: #f8f9fa;
+    font-size: 1.1rem;
+    border-radius: 5px; 
+}
+
+.user-dropdown-list li a {
+    text-decoration: none;
+    color: #333;
+}
+
+/*------------------------------------------------------------*/
+/* Оформлення головного контейнера */
+/*------------------------------------------------------------*/
+
+.main-container {
+    display: flex;
+    min-height: calc(100vh - 54px); /* Висота вікна мінус висота верхньої панелі */
+}
+
+/*------------------------------------------------------------*/
+/* Оформлення навігаційної панелі */
+/*------------------------------------------------------------*/
+.sidebar {
+    width: 200px;
+    background-color: white;
+    border-right: 1px solid #dee2e6;
+    padding: 20px 0;
+    /* transform: translateX(100%); */
+    transition: transform 0.8s ease;
+}
+
+@media (max-width: 768px) {
+
+    .burger {
+        display: block;
+        font-size: 24px;
+        cursor: pointer;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        width: 250px;
+        transform: translateX(-100%);
+        transition: transform 0.6s ease;
+        z-index: 1000; /* Розташування поверх іншого контенту */
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    .content-button {
+        margin-left: 0; 
+        justify-content: center;  
+
+    }
+}
+
+.nav-list{
+    list-style: none;
+    display: flex;
+    flex-direction: column;    
+}
+
+.nav-list li {
+    margin-bottom: 10px;
+}
+
+.nav-list li a {
+    display: block; 
+    padding: 10px 20px;
+    color: #333; 
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: all 0.2s ease; /* Плавний перехід стилів */
+}
+
+.nav-list li:not(:last-of-type){
+    margin-bottom: 15px; /* Відстань між пунктами меню, крім останнього */
+}
+
+.nav-list li a:hover {
+    background-color: #f8f9fa; 
+    font-size: 1.2rem;
+    color: #000;
+}
+
+.nav-list a.active {
+    font-weight: bold;
+    color: #007bff;
+    border-left: 4px solid #007bff; /* Лінія зліва для акценту */
+    background-color: #f1f7ff;
+}
+
+/*------------------------------------------------------------*/
+/* Оформлення основної панелі Dashboard */
+/*------------------------------------------------------------*/
+
+.content-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.content-button{
+    display: flex;
+    position: relative;
+    margin-top: 10px;
+    margin-left: 40px;
+    padding: 0 20px;
+}
+
+.content-button button{
+    font-size: 1.1rem;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    margin: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 4px;
+}
+
+.content-button button:hover {
+    background: #e9ecef;
+}
+
+.content {
+    flex-grow: 1; /* Займає весь вільний простір, що залишився */
+    padding: 20px;
+    display: flex; /* Розташовує дві колонки поруч */
+    gap: 20px; 
+}
+
+/* Налаштування ширини колонок */
+.charts-column {
+    flex: 2; /* Ця колонка буде вдвічі ширшою за праву */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.widgets-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Розташування двох нижніх графіків поруч */
+.small-charts {
+    display: flex;
+    gap: 20px;
+}
+
+.small-charts .card {
+    flex: 1; /* Робить нижні картки однакової ширини */
+}
+
+/* Загальний стиль для білих блоків (карток) */
+.card {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 20px;
+}
+
+.card h3 {
+    font-size: 1.1rem;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.chart-placeholder {
+    height: 200px;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    border-radius: 6px;
+}
+
+/* Кольори для статусів */
+.done { color: green; font-weight: bold; }
+.process { color: red; font-weight: bold; }
+.todo { color: gray; }
+
+/*------------------------------------------------------------*/
+/* Оформлення основної панелі Student */
+/*------------------------------------------------------------*/
+
+.student-content {
+    flex-grow: 1; /* Займає весь вільний простір, що залишився */
+    padding: 20px;
+    min-width: 0; /* Дозволяє колонці стискатися до мінімальної ширини при необхідності */
+}
+
+.title {
+    font-size: 1.5rem;
+    margin-top: 15px;
+    margin-left: 20px;
+}
+
+.button-on-table {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    cursor: pointer;
+    background: #f8f9fa;
+}
+
+.btn-add{
+    font-size: 1.3rem;
+    display: block;
+    margin-left: auto;
+    margin-bottom: 10px;
+    padding: 3px 10px;
+    border-radius: 10%;
+    background: #f8f9fa;
+}
+
+.btn-delete-all{
+    font-size: 1rem;
+    display: none;
+    margin-bottom: 10px;
+    padding: 0px 8px;
+    border-radius: 3px;
+    background: #f8f9fa;
+}
+
+.table-wrapper {
+    width: 100%;
+    -webkit-overflow-scrolling: touch; /* Додає плавну прокрутку на мобільних пристроях */
+    overflow-x: auto;
+} 
+
+.students-table{
+    width: 100%;
+    border-collapse: collapse; /* Видаляє проміжки між комірками таблиці */
+}
+
+@media (max-width: 768px) {
+    .students-table {
+        min-width: 700px; /* Мінімальна ширина таблиці для мобільних пристроїв */
+    }
+}
+
+.students-table th, .students-table td {
+    border: 1px solid #dee2e6;
+    padding: 10px;
+    text-align: center;
+}
+
+.students-table [type="checkbox"] {
+    width: 17px;
+    height: 17px;
+}
+
+#select-all, .select-student {
+    cursor: pointer;
+}
+
+#select-all:hover,
+.select-student:hover {
+    filter: brightness(0.95); /* Злегка затемнюємо чекбокси при наведенні */
+}
+
+.students-table td:nth-child(6) {
+    position: relative;
+}
+
+
+.status{
+    display: block; 
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.status--online {
+    background: rgb(37, 180, 37);
+}
+
+.status--offline {
+    background: #adb5bd;
+}
+
+.btn-edit, .btn-delete{
+    padding: 3px 4px 1px;
+    cursor: pointer;
+    background: white;
+    border-radius: 10%;
+}
+
+.pagination{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    height: 40px;
+    gap: 8px;
+}
+
+.page-btn {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+}
+
+.btn-edit:active,
+.btn-delete:active,
+.btn-add:active,
+.btn-delete-all:active, 
+.page-btn:active {
+    transform: scale(0.95);
+}
+
+.btn-edit:hover,
+.btn-delete:hover,
+.btn-add:hover,
+.page-btn:hover,
+.btn-delete-all:hover {
+    background: #e9ecef;
+    cursor: pointer;
+}
+
+.page-btn:hover {
+    background: #e9ecef;
+    height: 30px;
+    width: 30px;
+}
+
+.page-btn.active {
+    font-weight: bold;
+    border-color: #333;
+}
+
+/*------------------------------------------------------------*/
+/* Оформлення модальної панелі додавання студента */
+/*------------------------------------------------------------*/
+
+/* Темний фон, який перекриває сторінку */
+.modal-overlay{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1000;/* Розташування поверх всього контенту */
+
+    display: none; /* Сховано за замовчуванням */
+
+    /* Наступне працює лише при визначеному [display] */
+    justify-content: center; /* Центрування по горизонталі */
+    align-items: center; /* Центрування по вертикалі */
+}
+
+/* Саме біле вікно */
+.modal-window {
+    background-color: white;
+    width: 450px;
+    border: 1px solid #767676;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column; /* Розташування заголовка, тіла та футера вертикально */
+}
+
+.modal-header{
+    display: flex;
+    justify-content: space-between; /* Розташування заголовка зліва та кнопки закриття справа */
+    align-items: center; /* Вертикальне вирівнювання заголовка та кнопки закриття */
+    padding: 15px 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-title{
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.btn-close{
+    font-size: 1.2rem;
+    width: 25px;
+    cursor: pointer;
+}
+
+.modal-body{
+    padding: 15px 20px;
+}
+
+.form-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    width: 100px;  /* Фіксована ширина для вирівнювання інпутів */
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.form-control {
+    flex-grow: 1; /* Займає весь залишковий простір */
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.modal-footer{
+    display: flex;
+    justify-content: flex-end; /* Розташування кнопок в правій частині футера */
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+
+}
+
+.modal-footer button {
+    margin: 0 5px;
+    padding: 8px 16px;
+    border-radius: 5px;
+}
+
+.modal-footer button:hover {
+    background-color: #f8f9fa;
+}
+
+.modal-footer button:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .content {
+        flex-direction: column; /* Змушує праву колонку з віджетами впасти під ліву */
+    }
+
+    .small-charts {
+        flex-direction: column; /* Змушує два маленькі графіки стати один під одним */
+    }
+
+    .content-button {
+        margin-left: 0; /* Прибирає зайвий зсув кнопок вправо на телефоні */
+        justify-content: center; /* Вирівнює кнопки по центру для краси */
+    }
+}
+
+.btn-close:active{
+    transform: scale(0.95);
+}
+
+#delete-modal .modal-body{
+    padding: 40px 20px;
+}

@@ -1,0 +1,9 @@
+# Налаштування редактора
+.vscode/
+
+# Системні файли macOS та Windows
+.DS_Store
+Thumbs.db
+
+# Логи
+*.log
