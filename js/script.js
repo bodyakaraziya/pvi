@@ -1,9 +1,14 @@
 // ==========================================
-// 1. ЗАГАЛЬНИЙ ІНТЕРФЕЙС (Sidebar, Header)
+// Дзвіночок
 // ==========================================
 
 const iconBell = document.querySelector(".bell-icon");
+const notificationIndicator = document.querySelector(".notification-indicator");
 let timerNotification = null;
+
+if (localStorage.getItem("newNotification") === "true") {
+  notificationIndicator.style.display = "block";
+}
 
 if (iconBell) {
     iconBell.addEventListener("click", () => {
@@ -11,6 +16,7 @@ if (iconBell) {
 
         timerNotification = setTimeout(() => {
             window.location.href = "message.html"; 
+            localStorage.setItem("newNotification", "false");
             timerNotification = null; 
         }, 300); 
     });
@@ -25,6 +31,8 @@ if (iconBell) {
 
         setTimeout(() => {
             iconBell.classList.remove("ringing");
+            notificationIndicator.style.display = "block";
+            localStorage.setItem("newNotification", "true");
         }, 1500);
     });
 }
@@ -52,15 +60,12 @@ if (btnBurger && panelSidebar) {
 
 
 // ==========================================
-// 2. ЛОГІКА СТОРІНКИ СТУДЕНТІВ
+// Сторінка студентів
 // ==========================================
 
 const tableBodyStudents = document.getElementById("students-table-body");
 
 if (tableBodyStudents) {
-
-    // --- 2.1. Оголошення DOM-елементів ---
-
     const btnAddStudent = document.querySelector(".btn-add");
     const btnDeleteSelected = document.querySelector(".btn-delete-all");
     const checkboxSelectAll = document.querySelector("#select-all");
@@ -87,16 +92,10 @@ if (tableBodyStudents) {
     const btnCancelDelete = document.getElementById("cancel-delete");
     const btnCloseDeleteModal = document.getElementById("close-delete-modal");
 
-    // --- 2.2. Змінні стану ---
-
     let nextStudentId = 4; // Лічильник для нових записів
     let idEditingRow = null; // ID рядка, який зараз редагується
     let idDeletingRow = null; // ID рядка, який планується видалити (одиничне видалення)
 
-
-    // --- 2.3. Допоміжні функції ---
-
-    // Форматування дат
     function convertDateToInputFormat(dateStr) {
         if (!dateStr) return "";
         const [day, month, year] = dateStr.split(".");
@@ -118,7 +117,6 @@ if (tableBodyStudents) {
         };
     }
 
-    // Очищення полів форми
     function clearStudentForm() {
         if (inputGroup) inputGroup.value = "";
         if (inputFirstName) inputFirstName.value = "";
@@ -139,8 +137,7 @@ if (tableBodyStudents) {
     }
 
 
-    // --- 2.4. Встановлення статусів (Online/Offline) ---
-
+    // Встановлення статусів online-off
     function updateOnlineStatuses() {
         const rows = document.querySelectorAll(".students-table tbody tr");
         if (!labelUserName || rows.length === 0) return;
@@ -162,21 +159,17 @@ if (tableBodyStudents) {
         });
     }
 
-    // Викликаємо одразу для наявних студентів
     updateOnlineStatuses();
 
-
-    // --- 2.5. Обробка подій всередині таблиці (Делегування) ---
-    // Слухаємо кліки на всьому тілі таблиці, щоб працювало для динамічних рядків
-
+    // Клік по будь-якій частині таблиці, щоб для кожного рядка працювало
     tableBodyStudents.addEventListener("click", function (e) {
         
-        // 1. Клік по чекбоксу студента
+        // Клік по чекбоксу студента
         if (e.target.classList.contains("select-student")) {
             updateDeleteButtonVisibility();
         }
 
-        // 2. Клік по кнопці "Редагувати"
+        // Клік по кнопці редагувати
         const btnEdit = e.target.closest(".btn-edit");
         if (btnEdit && modalStudent) {
             const row = btnEdit.closest("tr");
@@ -202,13 +195,12 @@ if (tableBodyStudents) {
             modalStudent.style.display = "flex";
         }
 
-        // 3. Клік по кнопці "Видалити" (окремий студент)
+        // Клік по кнопці видалити
         const btnDeleteRow = e.target.closest(".btn-delete");
         if (btnDeleteRow && modalDelete) {
             const row = btnDeleteRow.closest("tr");
             idDeletingRow = row.dataset.id; 
-            
-            // Дістаємо ім'я студента з третьої колонки і вставляємо в span
+           
             if (spanDeleteUserName) {
                 spanDeleteUserName.textContent = row.cells[2].textContent.trim();
             }
@@ -217,7 +209,7 @@ if (tableBodyStudents) {
         }
     });
 
-    // Клік по головному чекбоксу "Вибрати всіх"
+    // Клік по головному чекбоксу
     if (checkboxSelectAll) {
         checkboxSelectAll.addEventListener("change", () => {
             const allCheckboxes = document.querySelectorAll(".select-student");
@@ -229,7 +221,7 @@ if (tableBodyStudents) {
     }
 
 
-    // --- 2.6. Логіка модального вікна додавання/редагування ---
+    // Модальне вікно додавання/редагування
 
     // Відкриття для додавання
     if (btnAddStudent && modalStudent) {
@@ -242,7 +234,6 @@ if (tableBodyStudents) {
         });
     }
 
-    // Закриття вікна
     function closeStudentModal() {
         modalStudent.style.display = "none";
         clearStudentForm();
@@ -299,28 +290,26 @@ if (tableBodyStudents) {
             }
 
             closeStudentModal();
-            updateOnlineStatuses(); // Оновлюємо статуси після зміни даних
+            updateOnlineStatuses(); 
         });
     }
 
 
-    // --- 2.7. Логіка модального вікна видалення ---
+    // Модальне вікно видалення
 
-    // Відкриття вікна при натисканні на "Видалити вибраних" (масове видалення)
-if (btnDeleteSelected && modalDelete) {
-    btnDeleteSelected.addEventListener("click", () => {
-        idDeletingRow = null; 
-        
-        // Змінюємо текст для масового видалення
-        if (spanDeleteUserName) {
-            spanDeleteUserName.textContent = "all selected users";
-        }
-        
-        modalDelete.style.display = "flex";
-    });
-}
+    // Видалити всіх
+    if (btnDeleteSelected && modalDelete) {
+        btnDeleteSelected.addEventListener("click", () => {
+            idDeletingRow = null; 
+            
+            if (spanDeleteUserName) {
+                spanDeleteUserName.textContent = "all selected users";
+            }
+            
+            modalDelete.style.display = "flex";
+        });
+    }
 
-    // Закриття вікна видалення
     const closeDeleteModal = () => {
         modalDelete.style.display = "none";
         idDeletingRow = null;
@@ -333,11 +322,11 @@ if (btnDeleteSelected && modalDelete) {
     if (btnConfirmDelete) {
         btnConfirmDelete.addEventListener("click", () => {
             if (idDeletingRow) {
-                // Одиничне видалення
+                // Видалити одного
                 const rowToRemove = document.querySelector(`tr[data-id="${idDeletingRow}"]`);
                 if (rowToRemove) rowToRemove.remove();
             } else {
-                // Масове видалення вибраних чекбоксів
+                // Видалити всіх
                 const allCheckboxes = document.querySelectorAll(".select-student");
                 allCheckboxes.forEach(checkbox => {
                     if (checkbox.checked) {
@@ -348,7 +337,7 @@ if (btnDeleteSelected && modalDelete) {
             }
             
             closeDeleteModal();
-            updateDeleteButtonVisibility(); // Сховаємо кнопку "Видалити вибраних", якщо таблиця порожня
+            updateDeleteButtonVisibility();
         });
     }
 }
