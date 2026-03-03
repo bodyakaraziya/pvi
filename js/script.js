@@ -303,7 +303,7 @@ if (tableBodyStudents) {
             idDeletingRow = null; 
             
             if (spanDeleteUserName) {
-                spanDeleteUserName.textContent = "all selected users";
+                spanDeleteUserName.textContent = "all selected students";
             }
             
             modalDelete.style.display = "flex";
