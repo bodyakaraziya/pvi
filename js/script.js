@@ -143,14 +143,25 @@ if (tableBodyStudents) {
 
         // Додаткові перевірки залежно від обраного режиму
         if (window.validationMode === "js") {
-            if (firstNameVal && firstNameVal.length < 2) { isValid = false; inputFirstName.classList.add("error"); }
-            if (lastNameVal && lastNameVal.length < 2) { isValid = false; inputLastName.classList.add("error"); }
-            if (birthdayVal) {
-                const birthYear = new Date(birthdayVal).getFullYear();
-                if (birthYear < 1900 || birthYear > 2010) { 
-                    isValid = false; 
-                    inputBirthday.classList.add("error"); 
+            const isValidName = (str) => {
+                const allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгґдеєжзиіїйклмнопрстуфхцчшщьюяАБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ-'";
+                for (let i = 0; i < str.length; i++) {
+                    if (!allowed.includes(str[i])) return false;
                 }
+                return true;
+            };
+
+            if (firstNameVal && (firstNameVal.length < 2 || !isValidName(firstNameVal))) { 
+                isValid = false; 
+                inputFirstName.classList.add("error"); 
+            }
+            if (lastNameVal && (lastNameVal.length < 2 || !isValidName(lastNameVal))) { 
+                isValid = false; 
+                inputLastName.classList.add("error"); 
+            }
+            if (birthdayVal && new Date(birthdayVal).getFullYear() > 2010) { 
+                isValid = false; 
+                inputBirthday.classList.add("error"); 
             }
         } else if (window.validationMode === "regex") {
             const nameReg = /^[A-Za-zА-Яа-яЇїЄєІіҐґ\-]+$/;

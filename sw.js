@@ -1,13 +1,15 @@
-const CACHE_NAME = "pvi-lab-cache-v1";
+const CACHE_NAME = "pvi-lab-cache-v2";
 const urlsToCache = [
     "./",
     "./index.html",
     "./student.html",
     "./task.html",
+    "./message.html", 
     "./css/style.css",
-    "./js/script.js",
+    "./js/script.js", 
     "./manifest.json",
-    "./image/avatar.jpg"
+    "./image/avatar.jpg",
+    "./icons/app_icon.png"
 ];
 
 self.addEventListener("install", event => {
@@ -31,4 +33,4 @@ self.addEventListener("activate", event => {
             );
         })
     );
-});а 
+});
