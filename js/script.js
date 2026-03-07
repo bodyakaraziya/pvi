@@ -83,7 +83,7 @@ if (tableBodyStudents) {
     const btnCancelStudentModal = modalStudent?.querySelector(".btn-cancel");
 
     // Елементи форми
-    window.validationMode = "html"; // "html", "js" або "regex"
+    window.validationMode = "js"; // "html", "js" або "regex"
     const formStudent = document.getElementById("add-student-form");
     const inputStudentId = document.getElementById("student-id");
     const inputGroup = document.getElementById("group");
