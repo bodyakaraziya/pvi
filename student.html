@@ -107,7 +107,7 @@
                             <td>M</td>
                             <td>12.06.2007</td>
                             <td>
-                                <span class="status status--online status--offline" aria-label="Status"></span>
+                                <span class="status status--offline" aria-label="Status"></span>
                             </td>
                             <td>
                                 <button class="btn-edit" aria-label="Edit student">
@@ -131,11 +131,11 @@
                                 <input type="checkbox" class="select-student" aria-label="Select student">
                             </td>
                             <td>PZ-22</td>
-                            <td>Daryna</td>
+                            <td>Daryna B</td>
                             <td>F</td>
                             <td>28.11.2006</td>
                             <td>
-                                <span class="status status--online status--offline" aria-label="Status"></span>
+                                <span class="status status--offline" aria-label="Status"></span>
                             </td>
                             <td>
                                 <button class="btn-edit" aria-label="Edit student">
@@ -159,11 +159,11 @@
                                 <input type="checkbox" class="select-student" aria-label="Select student">
                             </td>
                             <td>PZ-22</td>
-                            <td>Ivan</td>
+                            <td>Ivan L</td>
                             <td>M</td>
                             <td>03.09.2007</td>
                             <td>
-                                <span class="status status--online status--offline" aria-label="Status"></span>
+                                <span class="status status--offline" aria-label="Status"></span>
                             </td>
                             <td>
                                 <button class="btn-edit" aria-label="Edit student">
@@ -205,9 +205,11 @@
             </div>
             <div class="modal-body">
                 <form id="add-student-form">
+                    <input type="hidden" id="student-id">
+                
                     <div class="form-group">
                         <label for="group">Group</label>
-                        <select id="group" class="form-control" required>
+                        <select id="group" class="form-control" required aria-label="Select group">
                             <option value="" disabled selected>Select Group</option>
                             <option value="PZ-21">PZ-21</option>
                             <option value="PZ-22">PZ-22</option>
@@ -217,29 +219,40 @@
                             <option value="PZ-26">PZ-26</option>
                         </select>
                     </div>
-
+                
                     <div class="form-group">
                         <label for="first-name">First Name</label>
-                        <input type="text" id="first-name" class="form-control" required>
+                        <div class="input-wrapper">
+                            <input type="text" id="first-name" class="form-control" pattern="^[A-Za-zА-Яа-яЇїЄєІіҐґ\-]+$" required
+                                aria-label="First name">
+                            <span class="error-text" aria-live="polite">Invalid first name format</span>
+                        </div>
                     </div>
-
+                
                     <div class="form-group">
                         <label for="last-name">Last Name</label>
-                        <input type="text" id="last-name" class="form-control" required>
+                        <div class="input-wrapper">
+                            <input type="text" id="last-name" class="form-control" pattern="^[A-Za-zА-Яа-яЇїЄєІіҐґ\-]+$" required
+                                aria-label="Last name">
+                            <span class="error-text" aria-live="polite">Invalid last name format</span>
+                        </div>
                     </div>
-
+                
                     <div class="form-group">
                         <label for="gender">Gender</label>
-                        <select id="gender" class="form-control">
+                        <select id="gender" class="form-control" required aria-label="Select gender">
                             <option value="" disabled selected>Select Gender</option>
                             <option value="M">Male</option>
                             <option value="F">Female</option>
                         </select>
                     </div>
-
+                
                     <div class="form-group">
                         <label for="birthday">Birthday</label>
-                        <input type="date" id="birthday" class="form-control" required>
+                        <div class="input-wrapper">
+                            <input type="date" id="birthday" class="form-control" min="1900-01-01" max="2010-12-31" required aria-label="Birthday">
+                            <span class="error-text" aria-live="polite">Date must be between 1900 and 2010</span>
+                        </div>
                     </div>
                 </form>
             </div>

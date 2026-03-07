@@ -2,7 +2,6 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js")
 }
 
-
 // ==========================================
 // Дзвіночок
 // ==========================================
@@ -84,13 +83,16 @@ if (tableBodyStudents) {
     const btnCancelStudentModal = modalStudent?.querySelector(".btn-cancel");
 
     // Елементи форми
+    window.validationMode = "html"; // "html", "js" або "regex"
+    const formStudent = document.getElementById("add-student-form");
+    const inputStudentId = document.getElementById("student-id");
     const inputGroup = document.getElementById("group");
     const inputFirstName = document.getElementById("first-name");
     const inputLastName = document.getElementById("last-name");
     const selectGender = document.getElementById("gender");
     const inputBirthday = document.getElementById("birthday");
 
-    // Елементи модального вікна "Підтвердження видалення"
+    // Елементи модального вікна видалення
     const modalDelete = document.getElementById("delete-modal");
     const spanDeleteUserName = document.getElementById("delete-user-name");
     const btnConfirmDelete = document.getElementById("confirm-delete");
@@ -98,8 +100,77 @@ if (tableBodyStudents) {
     const btnCloseDeleteModal = document.getElementById("close-delete-modal");
 
     let nextStudentId = 4; // Лічильник для нових записів
-    let idEditingRow = null; // ID рядка, який зараз редагується
-    let idDeletingRow = null; // ID рядка, який планується видалити (одиничне видалення)
+
+    const allFormInputs = [inputGroup, inputFirstName, inputLastName, selectGender, inputBirthday];
+
+    function clearStudentForm() {
+        if (inputStudentId) inputStudentId.value = "";
+        allFormInputs.forEach(input => {
+            if (input) {
+                input.value = "";
+                input.classList.remove("error");
+            }
+        });
+    }
+
+    allFormInputs.forEach(input => {
+        input.addEventListener("input", () => input.classList.remove("error"));
+        input.addEventListener("change", () => input.classList.remove("error"));
+    });
+
+    function validateForm() {
+        if (window.validationMode === "html") {
+            formStudent.removeAttribute("novalidate");
+            return formStudent.checkValidity(); 
+        }
+
+        formStudent.setAttribute("novalidate", "true");
+        let isValid = true;
+        
+        allFormInputs.forEach(input => input.classList.remove("error"));
+
+        const groupVal = inputGroup.value.trim();
+        const firstNameVal = inputFirstName.value.trim();
+        const lastNameVal = inputLastName.value.trim();
+        const genderVal = selectGender.value;
+        const birthdayVal = inputBirthday.value;
+
+        if (!groupVal) { isValid = false; inputGroup.classList.add("error"); }
+        if (!genderVal) { isValid = false; selectGender.classList.add("error"); }
+        if (!firstNameVal) { isValid = false; inputFirstName.classList.add("error"); }
+        if (!lastNameVal) { isValid = false; inputLastName.classList.add("error"); }
+        if (!birthdayVal) { isValid = false; inputBirthday.classList.add("error"); }
+
+        // Додаткові перевірки залежно від обраного режиму
+        if (window.validationMode === "js") {
+            if (firstNameVal && firstNameVal.length < 2) { isValid = false; inputFirstName.classList.add("error"); }
+            if (lastNameVal && lastNameVal.length < 2) { isValid = false; inputLastName.classList.add("error"); }
+            if (birthdayVal) {
+                const birthYear = new Date(birthdayVal).getFullYear();
+                if (birthYear < 1900 || birthYear > 2010) { 
+                    isValid = false; 
+                    inputBirthday.classList.add("error"); 
+                }
+            }
+        } else if (window.validationMode === "regex") {
+            const nameReg = /^[A-Za-zА-Яа-яЇїЄєІіҐґ\-]+$/;
+            const dateReg = /^(19\d{2}|200\d|2010)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+            if (firstNameVal && !nameReg.test(firstNameVal)) { isValid = false; inputFirstName.classList.add("error"); }
+            if (lastNameVal && !nameReg.test(lastNameVal)) { isValid = false; inputLastName.classList.add("error"); }
+            if (birthdayVal && !dateReg.test(birthdayVal)) { isValid = false; inputBirthday.classList.add("error"); }
+        }
+
+        return isValid;
+    }
+
+    function openModal(modal) {
+        modal.style.display = "flex";
+    }
+
+    function closeModal(modal) {
+        modal.style.display = "none";
+    }
 
     function convertDateToInputFormat(dateStr) {
         if (!dateStr) return "";
@@ -120,15 +191,6 @@ if (tableBodyStudents) {
             firstName: parts[0] || "",
             lastName: parts[1] || ""
         };
-    }
-
-    function clearStudentForm() {
-        if (inputGroup) inputGroup.value = "";
-        if (inputFirstName) inputFirstName.value = "";
-        if (inputLastName) inputLastName.value = "";
-        if (selectGender) selectGender.value = "";
-        if (inputBirthday) inputBirthday.value = "";
-        idEditingRow = null;
     }
 
     // Оновлення видимості кнопки "Видалити вибраних"
@@ -178,7 +240,8 @@ if (tableBodyStudents) {
         const btnEdit = e.target.closest(".btn-edit");
         if (btnEdit && modalStudent) {
             const row = btnEdit.closest("tr");
-            idEditingRow = row.dataset.id;
+            
+            inputStudentId.value = row.dataset.id;
 
             const group = row.cells[1].textContent.trim();
             const fullName = row.cells[2].textContent.trim();
@@ -197,20 +260,20 @@ if (tableBodyStudents) {
             btnSaveStudent.textContent = "Save";
             btnSaveStudent.dataset.mode = "edit";
 
-            modalStudent.style.display = "flex";
+            openModal(modalStudent);
         }
 
         // Клік по кнопці видалити
         const btnDeleteRow = e.target.closest(".btn-delete");
         if (btnDeleteRow && modalDelete) {
             const row = btnDeleteRow.closest("tr");
-            idDeletingRow = row.dataset.id; 
+            inputStudentId.value = row.dataset.id; 
            
             if (spanDeleteUserName) {
                 spanDeleteUserName.textContent = row.cells[2].textContent.trim();
             }
             
-            modalDelete.style.display = "flex";
+            openModal(modalDelete);
         }
     });
 
@@ -235,12 +298,12 @@ if (tableBodyStudents) {
             titleModalStudent.textContent = "Add student";
             btnSaveStudent.textContent = "Create";
             btnSaveStudent.dataset.mode = "create";
-            modalStudent.style.display = "flex";
+            openModal(modalStudent);
         });
     }
 
     function closeStudentModal() {
-        modalStudent.style.display = "none";
+        closeModal(modalStudent);
         clearStudentForm();
     };
 
@@ -249,7 +312,16 @@ if (tableBodyStudents) {
 
     // Збереження форми
     if (btnSaveStudent) {
-        btnSaveStudent.addEventListener("click", () => {
+        btnSaveStudent.addEventListener("click", (e) => {
+            if (window.validationMode !== "html") {
+                e.preventDefault();
+            }
+
+            if (!validateForm()) {
+                return;
+            }
+
+            const id = inputStudentId.value;
             const mode = btnSaveStudent.dataset.mode;
             const groupVal = inputGroup.value.trim();
             const firstNameVal = inputFirstName.value.trim();
@@ -258,11 +330,6 @@ if (tableBodyStudents) {
             const birthdayVal = inputBirthday.value;
             
             const fullName = [firstNameVal, lastNameVal].filter(Boolean).join(" ");
-
-            if (!groupVal || !fullName || !birthdayVal) {
-                alert("Please fill in all required fields.");
-                return;
-            }
 
             if (mode === "create") {
                 const tr = document.createElement("tr");
@@ -294,8 +361,8 @@ if (tableBodyStudents) {
                     </td>
                     `;
                 tableBodyStudents.appendChild(tr);
-            } else if (mode === "edit" && idEditingRow) {
-                const row = document.querySelector(`tr[data-id="${idEditingRow}"]`);
+            } else if (mode === "edit" && id) {
+                const row = document.querySelector(`tr[data-id="${id}"]`);
                 if (row) {
                     row.cells[1].textContent = groupVal;
                     row.cells[2].textContent = fullName;
@@ -303,6 +370,17 @@ if (tableBodyStudents) {
                     row.cells[4].textContent = convertDateToTableFormat(birthdayVal);
                 }
             }
+
+            const studentData = {
+                id: mode === "create" ? nextStudentId - 1 : id,
+                group: groupVal,
+                firstName: firstNameVal,
+                lastName: lastNameVal,
+                gender: genderVal,
+                birthday: birthdayVal
+            };
+
+            console.log(JSON.stringify(studentData, null, 2));
 
             closeStudentModal();
             updateOnlineStatuses(); 
@@ -315,19 +393,17 @@ if (tableBodyStudents) {
     // Видалити всіх
     if (btnDeleteSelected && modalDelete) {
         btnDeleteSelected.addEventListener("click", () => {
-            idDeletingRow = null; 
             
             if (spanDeleteUserName) {
                 spanDeleteUserName.textContent = "all selected students";
             }
             
-            modalDelete.style.display = "flex";
+            openModal(modalDelete);
         });
     }
 
-    const closeDeleteModal = () => {
-        modalDelete.style.display = "none";
-        idDeletingRow = null;
+    function closeDeleteModal() {
+        closeModal(modalDelete);
     };
 
     if (btnCancelDelete) btnCancelDelete.addEventListener("click", closeDeleteModal);
@@ -336,12 +412,13 @@ if (tableBodyStudents) {
     // Підтвердження видалення
     if (btnConfirmDelete) {
         btnConfirmDelete.addEventListener("click", () => {
-            if (idDeletingRow) {
-                // Видалити одного
-                const rowToRemove = document.querySelector(`tr[data-id="${idDeletingRow}"]`);
+            const id = inputStudentId.value;
+
+            if (id) { // Видалити одного
+                const rowToRemove = document.querySelector(`tr[data-id="${id}"]`);
                 if (rowToRemove) rowToRemove.remove();
-            } else {
-                // Видалити всіх
+                inputStudentId.value = "";
+            } else { // Видалити всіх
                 const allCheckboxes = document.querySelectorAll(".select-student");
                 allCheckboxes.forEach(checkbox => {
                     if (checkbox.checked) {
