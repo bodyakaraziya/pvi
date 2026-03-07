@@ -450,7 +450,6 @@ button:active{
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    cursor: pointer;
     background: #f8f9fa;
 }
 
@@ -670,6 +669,36 @@ button:active{
     border: 1px solid #dee2e6;
     border-radius: 4px;
     font-size: 0.9rem;
+}
+
+.hint {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: normal;
+    margin-left: 5px;
+}
+
+.input-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-control.error {
+    border-color: red;
+    background-color: #ffe6e6;
+}
+
+.error-text {
+    display: none;
+    color: red;
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+/* Якщо інпут має клас error, то сусідній span показується */
+.form-control.error+.error-text {
+    display: block;
 }
 
 .modal-footer{
