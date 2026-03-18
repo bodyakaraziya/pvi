@@ -10,7 +10,7 @@ const urlsToCache = [
     "./manifest.json",
     "./image/avatar.jpg",
     "./icons/app_icon.png"
-];
+];  
 
 self.addEventListener("install", event => {
     event.waitUntil(
