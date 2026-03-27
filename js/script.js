@@ -159,9 +159,23 @@ if (tableBodyStudents) {
                 isValid = false; 
                 inputLastName.classList.add("error"); 
             }
-            if (birthdayVal && new Date(birthdayVal).getFullYear() > 2010) { 
-                isValid = false; 
-                inputBirthday.classList.add("error"); 
+            if (birthdayVal) {
+                // Якщо поле містить дату у форматі DD.MM.YYYY, 
+                // її треба спершу прогнати через твою функцію convertDateToInputFormat
+                const dateObj = new Date(birthdayVal);
+                
+                // Перевіряємо, чи розпізналась дата (відсіюємо Invalid Date)
+                if (isNaN(dateObj.getTime())) {
+                    isValid = false;
+                    inputBirthday.classList.add("error");
+                } else {
+                    const year = dateObj.getFullYear();
+                    // Згрупована перевірка діапазону років
+                    if (year > 2010 || year < 1900) {
+                        isValid = false;
+                        inputBirthday.classList.add("error");
+                    }
+                }
             }
         } else if (window.validationMode === "regex") {
             const nameReg = /^[A-Za-zА-Яа-яЇїЄєІіҐґ\-]+$/;
