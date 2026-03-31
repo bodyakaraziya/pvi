@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PVI_lab01</title>
+    <link rel="stylesheet" href="public/css/style.css">
+    <link rel="manifest" href="public/manifest.json">
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="left-part">
+            <button class="burger" aria-label="Open menu">☰</button>
+            <a href="index.php?page=student" class="logo">CMS</a>
+        </div>
+
+        <div class="header-controls">
+            <?php if ($isLoggedIn): ?>
+                <div class="notification-wrapper" tabindex="0" role="button" aria-label="Notifications">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                        class="bell-icon" viewBox="0 0 16 16">
+                        <path
+                            d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6" />
+                    </svg>
+                    <span class="notification-indicator" aria-hidden="true"></span>
+    
+                    <div class="notification-dropdown">
+                        <ul class="notification-list">
+                            <li class="notification-item">
+                                <img src="public/image/avatar.jpg" alt="User avatar" class="other-avatar-image">
+                                <div class="user-block">
+                                    <span class="notification-name">Daryna</span>
+                                    <p class="notification-text">Lorem ipsum dolor sit amet elit.</p>
+                                </div>
+                            </li>
+                            <li class="notification-item">
+                                <img src="public/image/avatar.jpg" alt="Admin avatar" class="other-avatar-image">
+                                <div class="user-block">
+                                    <span class="notification-name">Admin</span>
+                                    <p class="notification-text">Lorem ipsum dolor sit amet elit.</p>
+                                </div>
+                            </li>
+                            <li class="notification-item">
+                                <img src="public/image/avatar.jpg" alt="User avatar" class="other-avatar-image">
+                                <div class="user-block">
+                                    <span class="notification-name">Ivan</span>
+                                    <p class="notification-text">Lorem ipsum dolor sit amet elit.</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+    
+                <div class="user-profile">
+                    <img src="public/image/avatar.jpg" alt="Your avatar" class="avatar-image">
+                    <span class="user-name">
+                        <?= htmlspecialchars($_SESSION['user']['firstname'] . ' ' . $_SESSION['user']['lastname']) ?>
+                    </span>
+    
+                    <div class="user-dropdown">
+                        <ul class="user-dropdown-list">
+                            <li><a href="#">Profile</a></li>
+                            <li><a href="index.php?page=logout">LogOut</a></li>
+                        </ul>
+                    </div>
+                </div>
+            <?php else: ?>
+                <button class="btn-login-header" onclick="openLoginModal()">LogIn</button>
+            <?php endif; ?>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <nav class="sidebar" aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="index.php?page=dashboard">Dashboard</a></li>
+                <li><a href="index.php?page=student">Students</a></li>
+                <li><a href="index.php?page=task">Tasks</a></li>
+            </ul>
+        </nav>
+
+        <main class="content">
+            <h1>Messages</h1>
+
+        </main>
+    </div>
+
+    <script src="public/js/script.js"></script>
+</body>
+
+</html>
