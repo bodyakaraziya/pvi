@@ -1,5 +1,5 @@
 // Змінюємо версію кешу, щоб браузер зрозумів, що треба оновити файли
-const CACHE_NAME = "pvi-lab-cache-v3"; 
+const CACHE_NAME = "pvi-lab-cache-v4"; 
 
 const urlsToCache = [
     "./", // Кешуємо кореневий запит (зазвичай це index.php)
@@ -28,17 +28,27 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("fetch", event => {
-    // Пропускаємо AJAX-запити до API (наприклад, додавання/видалення), 
-    // щоб вони завжди йшли на сервер, а не бралися з кешу
+    // 1. API-запити (додавання, логін, отримання даних) ігноруємо, вони йдуть ТІЛЬКИ на сервер
     if (event.request.url.includes('action=')) {
         return; 
     }
 
+    // 2. Стратегія "Network First" для всього іншого (HTML, CSS, JS)
     event.respondWith(
-        caches.match(event.request).then(response => {
-            // Якщо файл є в кеші - віддаємо його, інакше йдемо в мережу
-            return response || fetch(event.request);
-        })
+        fetch(event.request)
+            .then(response => {
+                // Якщо є зв'язок з сервером - беремо свіжу сторінку,
+                // непомітно оновлюємо її в кеші і віддаємо користувачу
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseClone);
+                });
+                return response;
+            })
+            .catch(() => {
+                // Якщо інтернету немає взагалі (офлайн) - дістаємо збережене з кешу
+                return caches.match(event.request);
+            })
     );
 });
 
