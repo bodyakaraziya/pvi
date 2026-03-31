@@ -1,26 +1,44 @@
-const CACHE_NAME = "pvi-lab-cache-v2";
+// Змінюємо версію кешу, щоб браузер зрозумів, що треба оновити файли
+const CACHE_NAME = "pvi-lab-cache-v3"; 
+
 const urlsToCache = [
-    "./",
-    "./index.html",
-    "./student.html",
-    "./task.html",
-    "./message.html", 
-    "./css/style.css",
-    "./js/script.js", 
-    "./manifest.json",
-    "./image/avatar.jpg",
-    "./icons/app_icon.png"
+    "./", // Кешуємо кореневий запит (зазвичай це index.php)
+    
+    // Кешуємо наші MVC-маршрути (сторінки)
+    "./index.php?page=student",
+    "./index.php?page=dashboard",
+    "./index.php?page=task",
+    "./index.php?page=message", 
+    
+    // Кешуємо статику (тепер вона лежить у папці public)
+    "./public/css/style.css",
+    "./public/js/script.js", 
+    "./public/manifest.json",
+    "./public/image/avatar.jpg",
+    "./public/icons/app_icon.png"
 ];  
 
 self.addEventListener("install", event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+        caches.open(CACHE_NAME).then(cache => {
+            console.log("Відкрито кеш");
+            return cache.addAll(urlsToCache);
+        })
     );
 });
 
 self.addEventListener("fetch", event => {
+    // Пропускаємо AJAX-запити до API (наприклад, додавання/видалення), 
+    // щоб вони завжди йшли на сервер, а не бралися з кешу
+    if (event.request.url.includes('action=')) {
+        return; 
+    }
+
     event.respondWith(
-        caches.match(event.request).then(response => response || fetch(event.request))
+        caches.match(event.request).then(response => {
+            // Якщо файл є в кеші - віддаємо його, інакше йдемо в мережу
+            return response || fetch(event.request);
+        })
     );
 });
 

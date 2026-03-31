@@ -18,6 +18,40 @@ button:active{
 }
 
 /*------------------------------------------------------------*/
+/* Автентифікація */
+/*------------------------------------------------------------*/
+
+.password-wrapper {
+    position: relative;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+}
+
+/* .password-wrapper .form-control {
+    width: 100%;
+    padding-right: 40px;
+} */
+
+.btn-toggle-password {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.btn-toggle-password:hover {
+    color: #343a40;
+}
+
+/*------------------------------------------------------------*/
 /* Оформлення верхньої панелі */
 /*------------------------------------------------------------*/
 
@@ -167,7 +201,6 @@ button:active{
 
 .notification-text{
     display: -webkit-box;
-    -webkit-line-clamp: 1; 
     -webkit-box-orient: vertical;
     overflow: hidden;
 
@@ -182,6 +215,31 @@ button:active{
 /*------------------------------------------------------------*/
 /* Оформлення профілю користувача */
 /*------------------------------------------------------------*/
+.btn-login-header {
+    background-color: transparent;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 4px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-login-header:hover {
+    background-color: #ffffff;
+    color: #343a40;
+    border-color: #ffffff;
+}
+
+.btn-login-header:active {
+    transform: scale(0.95);
+}
 
 .user-profile{
     display: flex;
@@ -254,7 +312,7 @@ button:active{
 
 .main-container {
     display: flex;
-    min-height: calc(100vh - 54px); /* Висота вікна мінус висота верхньої панелі */
+    min-height: calc(100vh - 60px); /* Висота вікна мінус висота верхньої панелі */
 }
 
 /*------------------------------------------------------------*/
@@ -558,41 +616,78 @@ button:active{
     gap: 8px;
 }
 
+/* Базовий стан кнопок пагінації */
 .page-btn {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
-    padding: 5px 10px;
-    cursor: pointer;
-    transition: background-color 0.2s;
 
+    /* Замість padding задаємо чіткі розміри */
+    min-width: 32px;
+    height: 32px;
+    padding: 0 4px;
+    /* Невеликий відступ на випадок трицифрових чисел */
+    margin: 0 2px;
+    /* Відстань між кнопками */
+
+    /* Центруємо цифри ідеально по центру */
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    border-radius: 4px;
+    /* Трохи більший радіус виглядає сучасніше */
+}
+
+/* При наведенні міняємо ТІЛЬКИ колір, розміри не чіпаємо! */
+.page-btn:hover {
+    background: #e9ecef;
+}
+
+/* При натисканні залишаємо ефект зменшення */
+.page-btn:active {
+    transform: scale(0.95);
+}
+
+/* Стиль для активної (поточної) сторінки */
+.page-btn.active {
+    background: rgb(109, 137, 165, 0.3);
+    /* Синій колір для виділення */
+    color: white;
+    border-color: #007bff;
+}
+
+/* Стиль для трикрапок (щоб не виглядали як кнопка) */
+.page-btn.dots {
+    background: transparent;
+    border: none;
+    cursor: default;
+    min-width: auto;
+}
+
+.page-btn.dots:hover {
+    background: transparent;
+}
+
+.page-btn.dots:active {
+    transform: none;
+    /* Відключаємо ефект натискання для трикрапок */
 }
 
 .btn-edit:active,
 .btn-delete:active,
 .btn-add:active,
-.btn-delete-all:active, 
-.page-btn:active {
+.btn-delete-all:active{
     transform: scale(0.95);
 }
 
 .btn-edit:hover,
 .btn-delete:hover,
 .btn-add:hover,
-.page-btn:hover,
 .btn-delete-all:hover {
     background: #e9ecef;
     cursor: pointer;
-}
-
-.page-btn:hover {
-    background: #e9ecef;
-    height: 30px;
-    width: 30px;
-}
-
-.page-btn.active {
-    font-weight: bold;
-    border-color: #333;
 }
 
 /*------------------------------------------------------------*/
