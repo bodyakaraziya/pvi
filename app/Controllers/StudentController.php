@@ -1,5 +1,5 @@
 <?php
-require_once 'models/StudentModel.php';
+require_once 'app/models/StudentModel.php';
 
 class StudentController
 {
@@ -17,7 +17,7 @@ class StudentController
         $pass = trim($_POST['password'] ?? '');
 
         // 1. Перевірка адміна
-        if ($user === 'admin' && $pass === 'admin') {
+        if ($user === 'admin' && $pass === 'ad123') {
             $_SESSION['user'] = ['firstname' => 'Super', 'lastname' => 'Admin', 'group' => 'Admin'];
             header("Location: index.php?page=student");
             exit();
@@ -98,7 +98,7 @@ class StudentController
     private function validate($data, $id = null)
     {
         $errors = [];
-        $nameReg = "/^[A-Za-zА-Яа-яЇїЄєІіҐґ\-]+$/u";
+        $nameReg = "/^[A-Za-zА-Яа-яЇїЄєІіҐґ]([A-Za-zА-Яа-яЇїЄєІіҐґ\'’\-]*[A-Za-zА-Яа-яЇїЄєІіҐґ])?$/u";
 
         if (empty($data['group']))
             $errors['group'] = "Оберіть групу.";
