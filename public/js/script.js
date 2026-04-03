@@ -359,13 +359,13 @@ let currentTargetToDelete = null;
 
 function confirmDelete(studentId, studentName) {
     currentTargetToDelete = studentId; 
-    if (spanDeleteUserName) spanDeleteUserName.textContent = studentName || "цього студента";
+    if (spanDeleteUserName) spanDeleteUserName.textContent = studentName || "this student";
     openModal(modalDelete);
 }
 
 function confirmDeleteAll() {
     currentTargetToDelete = 'all'; 
-    if (spanDeleteUserName) spanDeleteUserName.textContent = "усіх обраних студентів";
+    if (spanDeleteUserName) spanDeleteUserName.textContent = "all selected users";
     openModal(modalDelete);
 }
 

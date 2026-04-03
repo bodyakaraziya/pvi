@@ -6,7 +6,6 @@ $controller = new StudentController();
 $action = $_GET['action'] ?? null;
 $page = $_GET['page'] ?? 'student';
 
-// 1. ОБРОБКА API (AJAX)
 if ($action) {
     switch ($action) {
         case 'login':
@@ -31,7 +30,6 @@ if ($action) {
     exit();
 }
 
-// 2. ВІДОБРАЖЕННЯ СТОРІНОК
 $isLoggedIn = isset($_SESSION['user']);
 if (in_array($page, ['dashboard', 'task', 'message']) && !$isLoggedIn) {
     header("Location: index.php?page=student&auth_required=1");

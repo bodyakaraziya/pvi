@@ -26,7 +26,7 @@ class StudentModel
 
     public function getTotalPages($limit)
     {
-        return ceil(count($_SESSION['students']) / $limit);
+        return ceil(count($_SESSION['students']) / $limit); // ceil - округлення в більшу сторону
     }
 
     public function isDuplicate($firstName, $lastName, $group, $excludeId = null)
