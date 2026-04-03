@@ -10,20 +10,17 @@ class StudentController
         $this->model = new StudentModel();
     }
 
-    // ЛОГІКА ВХОДУ
     public function loginAction()
     {
         $user = trim($_POST['username'] ?? '');
         $pass = trim($_POST['password'] ?? '');
 
-        // 1. Перевірка адміна
         if ($user === 'admin' && $pass === 'ad123') {
-            $_SESSION['user'] = ['firstname' => 'Super', 'lastname' => 'Admin', 'group' => 'Admin'];
+            $_SESSION['user'] = ['firstname' => 'Admin', 'lastname' => '', 'group' => 'Admin'];
             header("Location: index.php?page=student");
             exit();
         }
 
-        // 2. Пошук студента
         foreach ($this->model->getAll() as $s) {
             if ($s['firstname'] . ' ' . $s['lastname'] === $user && strtotime($s['birthday']) === strtotime($pass)) {
                 $_SESSION['user'] = $s;
@@ -34,7 +31,6 @@ class StudentController
         header("Location: index.php?page=student&login_error=1");
     }
 
-    // ОТРИМАННЯ СПИСКУ (AJAX)
     public function getListAction()
     {
         $limit = 5;
@@ -48,7 +44,6 @@ class StudentController
         ]);
     }
 
-    // ВАЛІДАЦІЯ ТА ДОДАВАННЯ/РЕДАГУВАННЯ
     public function saveAction($mode = 'add')
     {
         if (!isset($_SESSION['user'])) {
@@ -103,9 +98,9 @@ class StudentController
         if (empty($data['group']))
             $errors['group'] = "Оберіть групу.";
         if (!preg_match($nameReg, $data['firstName'] ?? ''))
-            $errors['firstName'] = "Коректне ім'я обов'язкове.";
+            $errors['firstName'] = "Введіть коректне ім'я.";
         if (!preg_match($nameReg, $data['lastName'] ?? ''))
-            $errors['lastName'] = "Коректне прізвище обов'язкове.";
+            $errors['lastName'] = "Введіть коректне прізвище.";
 
         $year = (int) date('Y', strtotime($data['birthday'] ?? ''));
         if ($year < 1950 || $year > 2010)
