@@ -1,89 +1,112 @@
 <?php
-
+require_once 'app/Models/Database.php';
 class StudentModel
 {
+    private $db;
+
     public function __construct()
     {
-        // Ініціалізація стартових даних
-        if (!isset($_SESSION['students'])) {
-            $_SESSION['students'] = [
-                ['id' => 1, 'group' => 'PZ-22', 'firstname' => 'Bohdan', 'lastname' => 'Karaziia', 'gender' => 'M', 'birthday' => '2007-06-12'],
-                ['id' => 2, 'group' => 'PZ-22', 'firstname' => 'Daryna', 'lastname' => 'Baranova', 'gender' => 'F', 'birthday' => '2006-11-28']
-            ];
-        }
+        $this->db = Database::getConnection();
     }
 
-    public function getAll()
+    // Пошук студента за склеєним Ім'ям та Прізвищем для логіну
+    public function findByFullName($fullName)
     {
-        return $_SESSION['students'];
+        // Використовуємо CONCAT, щоб склеїти колонки прямо в БД
+        $stmt = $this->db->prepare("SELECT * FROM students WHERE CONCAT(firstname, ' ', lastname) = :fullname LIMIT 1");
+        $stmt->bindValue(':fullname', $fullName);
+        $stmt->execute();
+
+        // Повертаємо 1 знайдений рядок або false, якщо не знайдено
+        return $stmt->fetch();
     }
 
     public function getPaginated($page, $limit)
     {
         $offset = ($page - 1) * $limit;
-        return array_slice($_SESSION['students'], $offset, $limit);
+
+        // Змінюємо DESC на ASC (або можна взагалі прибрати "ORDER BY id ASC", 
+        // бо база даних і так сортує по ID за замовчуванням)
+        // $stmt = $this->db->prepare("SELECT * FROM students ORDER BY id ASC LIMIT :limit OFFSET :offset");
+        $stmt = $this->db->prepare("SELECT * FROM students LIMIT :limit OFFSET :offset");
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
     public function getTotalPages($limit)
     {
-        return ceil(count($_SESSION['students']) / $limit); // ceil - округлення в більшу сторону
+        $stmt = $this->db->query("SELECT COUNT(*) FROM students");
+        $totalRows = $stmt->fetchColumn();
+
+        return ceil($totalRows / $limit);
     }
 
     public function isDuplicate($firstName, $lastName, $group, $excludeId = null)
     {
-        foreach ($_SESSION['students'] as $s) {
-            if ($s['firstname'] === $firstName && $s['lastname'] === $lastName && $s['group'] === $group) {
-                if ($excludeId === null || $s['id'] != $excludeId) {
-                    return true;
-                }
-            }
+        $sql = "SELECT COUNT(*) FROM students WHERE firstname = :firstname AND lastname = :lastname AND `group` = :group";
+
+        if ($excludeId) {
+            $sql .= " AND id != :excludeId";
         }
-        return false;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':firstname', $firstName);
+        $stmt->bindValue(':lastname', $lastName);
+        $stmt->bindValue(':group', $group);
+
+        if ($excludeId) {
+            $stmt->bindValue(':excludeId', $excludeId);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchColumn() > 0;
     }
 
     public function add($data)
     {
-        $maxId = 0;
-        foreach ($_SESSION['students'] as $s) {
-            if ($s['id'] > $maxId)
-                $maxId = $s['id'];
-        }
-        $newId = $maxId + 1;
+        $stmt = $this->db->prepare("INSERT INTO students (`group`, firstname, lastname, gender, birthday) VALUES (:group, :firstname, :lastname, :gender, :birthday)");
 
-        $data['id'] = $newId;
-        $_SESSION['students'][] = $data;
-        return $newId;
+        $stmt->execute([
+            ':group' => $data['group'],
+            ':firstname' => $data['firstname'],
+            ':lastname' => $data['lastname'],
+            ':gender' => $data['gender'],
+            ':birthday' => $data['birthday']
+        ]);
+
+        return $this->db->lastInsertId();
     }
 
     public function update($id, $data)
     {
-        foreach ($_SESSION['students'] as $key => $s) {
-            if ($s['id'] == $id) {
-                $_SESSION['students'][$key] = array_merge($s, $data);
-                return true;
-            }
-        }
-        return false;
+        $stmt = $this->db->prepare("UPDATE students SET `group` = :group, firstname = :firstname, lastname = :lastname, gender = :gender, birthday = :birthday WHERE id = :id");
+
+        return $stmt->execute([
+            ':id' => $id,
+            ':group' => $data['group'],
+            ':firstname' => $data['firstname'],
+            ':lastname' => $data['lastname'],
+            ':gender' => $data['gender'],
+            ':birthday' => $data['birthday']
+        ]);
     }
 
     public function delete($id)
     {
-        foreach ($_SESSION['students'] as $key => $s) {
-            if ($s['id'] == $id) {
-                unset($_SESSION['students'][$key]);
-                $_SESSION['students'] = array_values($_SESSION['students']);
-                return true;
-            }
-        }
-        return false;
+        $stmt = $this->db->prepare("DELETE FROM students WHERE id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
     }
 
     public function deleteMultiple($ids)
     {
-        $_SESSION['students'] = array_filter($_SESSION['students'], function ($s) use ($ids) {
-            return !in_array($s['id'], $ids);
-        });
-        $_SESSION['students'] = array_values($_SESSION['students']);
-        return true;
+        // Створюємо рядок зі знаків питання типу (?, ?, ?) залежно від кількості ID
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $stmt = $this->db->prepare("DELETE FROM students WHERE id IN ($placeholders)");
+        return $stmt->execute($ids);
     }
 }
