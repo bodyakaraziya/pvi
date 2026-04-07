@@ -1,6 +1,7 @@
 <?php
-require_once 'app/models/StudentModel.php';
 
+require_once 'app/Models/StudentModel.php';
+require_once 'app/Models/Database.php';
 class StudentController
 {
     private $model;
@@ -15,20 +16,26 @@ class StudentController
         $user = trim($_POST['username'] ?? '');
         $pass = trim($_POST['password'] ?? '');
 
+        // 1. Перевірка на хардкодженого адміна
         if ($user === 'admin' && $pass === 'ad123') {
             $_SESSION['user'] = ['firstname' => 'Admin', 'lastname' => '', 'group' => 'Admin'];
             header("Location: index.php?page=student");
             exit();
         }
 
-        foreach ($this->model->getAll() as $s) {
-            if ($s['firstname'] . ' ' . $s['lastname'] === $user && strtotime($s['birthday']) === strtotime($pass)) {
-                $_SESSION['user'] = $s;
-                header("Location: index.php?page=student");
-                exit();
-            }
+        // 2. Делегуємо пошук базі даних (замість foreach)
+        $student = $this->model->findByFullName($user);
+
+        // 3. Якщо студент знайдений і пароль (дата) збігається
+        if ($student && strtotime($student['birthday']) === strtotime($pass)) {
+            $_SESSION['user'] = $student;
+            header("Location: index.php?page=student");
+            exit();
         }
+
+        // Якщо нічого не підійшло - повертаємо на сторінку з помилкою
         header("Location: index.php?page=student&login_error=1");
+        exit(); // Завжди додавай exit() після header, це гарна практика
     }
 
     public function getListAction()

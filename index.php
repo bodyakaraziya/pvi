@@ -1,6 +1,9 @@
 <?php
 session_start();
+
 require_once 'app/controllers/StudentController.php';
+require_once 'app/Models/StudentModel.php';
+require_once 'app/Models/Database.php';
 
 $controller = new StudentController();
 $action = $_GET['action'] ?? null;

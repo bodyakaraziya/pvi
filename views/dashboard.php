@@ -120,21 +120,21 @@
                         <h3>Notifications</h3>
                         <ul class="notification-list">
                             <li class="notification-item">
-                                <img src="image/avatar.jpg" alt="Avatar" class="other-avatar-image">
+                                <img src="public/image/avatar.jpg" alt="Avatar" class="other-avatar-image">
                                 <div class="user-block">
                                     <span class="notification-name">Daryna</span>
                                     <p class="notification-text">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
                                 </div>
                             </li>
                             <li class="notification-item">
-                                <img src="image/avatar.jpg" alt="Avatar" class="other-avatar-image">
+                                <img src="public/image/avatar.jpg" alt="Avatar" class="other-avatar-image">
                                 <div class="user-block">
                                     <span class="notification-name">Admin</span>
                                     <p class="notification-text">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
                                 </div>
                             </li>
                             <li class="notification-item">
-                                <img src="image/avatar.jpg" alt="Avatar" class="other-avatar-image">
+                                <img src="public/image/avatar.jpg" alt="Avatar" class="other-avatar-image">
                                 <div class="user-block">
                                     <span class="notification-name">Ivan</span>
                                     <p class="notification-text">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
