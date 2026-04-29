@@ -9,10 +9,8 @@ class StudentModel
         $this->db = Database::getConnection();
     }
 
-    // Пошук студента за склеєним Ім'ям та Прізвищем для логіну
     public function findByFullName($fullName)
     {
-        // Використовуємо CONCAT, щоб склеїти колонки прямо в БД
         $stmt = $this->db->prepare("SELECT * FROM students WHERE CONCAT(firstname, ' ', lastname) = :fullname LIMIT 1");
         $stmt->bindValue(':fullname', $fullName);
         $stmt->execute();
@@ -25,9 +23,6 @@ class StudentModel
     {
         $offset = ($page - 1) * $limit;
 
-        // Змінюємо DESC на ASC (або можна взагалі прибрати "ORDER BY id ASC", 
-        // бо база даних і так сортує по ID за замовчуванням)
-        // $stmt = $this->db->prepare("SELECT * FROM students ORDER BY id ASC LIMIT :limit OFFSET :offset");
         $stmt = $this->db->prepare("SELECT * FROM students LIMIT :limit OFFSET :offset");
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -103,7 +98,6 @@ class StudentModel
 
     public function deleteMultiple($ids)
     {
-        // Створюємо рядок зі знаків питання типу (?, ?, ?) залежно від кількості ID
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         $stmt = $this->db->prepare("DELETE FROM students WHERE id IN ($placeholders)");
