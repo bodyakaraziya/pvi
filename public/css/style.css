@@ -1690,9 +1690,43 @@ body.sidebar-collapsed .sidebar {
 }
 
 @media (max-width: 768px) {
+    html:has(.messages-layout),
+    body:has(.messages-layout) {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body:has(.messages-layout) .main-container {
+        height: calc(100dvh - 60px);
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    body:has(.messages-layout) .content-wrapper {
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    body:has(.messages-layout) .content-wrapper h1 {
+        flex: 0 0 auto;
+        margin-top: 12px;
+        margin-bottom: 0;
+    }
+
+    body:has(.messages-layout) .content {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+        padding: 12px;
+    }
+
     .messages-layout {
         grid-template-columns: 1fr;
-        height: auto;
+        height: 100%;
+        min-height: 0;
+        margin-top: 0;
+        overflow: hidden;
     }
 
     .messages-layout:not(.chat-open) .chat-window {
@@ -1704,7 +1738,20 @@ body.sidebar-collapsed .sidebar {
     }
 
     .chat-window {
-        min-height: calc(100vh - 160px);
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .chat-room-list {
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    #chat-room-list,
+    .chat-messages {
+        -webkit-overflow-scrolling: touch;
     }
 
     .chat-window-title-row {
