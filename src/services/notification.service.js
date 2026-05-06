@@ -1,85 +1,118 @@
 const { randomUUID } = require("crypto");
 const memoryStore = require("../data/memoryStore");
-const { findRoomById, getRoomDisplayName } = require("./room.service");
+const Notification = require("../models/Notification");
+const Student = require("../models/Student");
+const { findRoomById, formatRoomForUser } = require("./room.service");
 
-function getSenderName(senderId) {
-    const sender = memoryStore.students.find(student => student.id === senderId);
+function normalizeDate(date) {
+    if (!date) {
+        return null;
+    }
+
+    return date instanceof Date ? date.toISOString() : date;
+}
+
+function toPlainNotification(notification) {
+    if (!notification) {
+        return null;
+    }
+
+    if (typeof notification.toObject === "function") {
+        return notification.toObject();
+    }
+
+    return notification;
+}
+
+async function ensureInitialStudents() {
+    await Student.seedInitial(memoryStore.students);
+}
+
+async function getSenderName(senderId) {
+    await ensureInitialStudents();
+
+    const sender = await Student.findOne({ id: senderId }).lean();
 
     return sender
         ? `${sender.firstName} ${sender.lastName || ""}`.trim()
         : "Unknown";
 }
 
-function getNotificationRoomMeta(notification) {
-    const room = findRoomById(notification.roomId);
+async function getNotificationRoomMeta(notification) {
+    const room = await findRoomById(notification.roomId);
+    const formattedRoom = room ? await formatRoomForUser(room, notification.recipientId) : null;
 
     return {
-        roomName: room
-            ? getRoomDisplayName(room, notification.recipientId)
+        roomName: formattedRoom
+            ? formattedRoom.name
             : notification.roomName || "Chat",
-        roomType: room?.type || notification.roomType || "direct"
+        roomType: formattedRoom?.type || notification.roomType || "direct"
     };
 }
 
-function normalizeNotification(notification) {
-    const senderName = notification.senderName || getSenderName(notification.senderId);
-    const { roomName, roomType } = getNotificationRoomMeta(notification);
-
-    notification.senderName = senderName;
-    notification.roomName = roomName;
-    notification.roomType = roomType;
+async function normalizeNotification(notification) {
+    const plainNotification = toPlainNotification(notification);
+    const senderName = plainNotification.senderName || await getSenderName(plainNotification.senderId);
+    const { roomName, roomType } = await getNotificationRoomMeta(plainNotification);
 
     return {
-        id: notification.id,
-        recipientId: notification.recipientId,
-        roomId: notification.roomId,
+        id: plainNotification.id,
+        recipientId: plainNotification.recipientId,
+        roomId: plainNotification.roomId,
         roomName,
         roomType,
-        senderId: notification.senderId,
+        senderId: plainNotification.senderId,
         senderName,
-        text: notification.text,
-        isRead: Boolean(notification.isRead),
-        createdAt: notification.createdAt
+        text: plainNotification.text,
+        isRead: Boolean(plainNotification.isRead),
+        createdAt: normalizeDate(plainNotification.updatedAt || plainNotification.createdAt)
     };
 }
 
-function getUserNotifications(userId) {
-    return memoryStore.notifications
-        .filter(notification => {
-            return notification.recipientId === userId && !notification.isRead;
-        })
-        .map(normalizeNotification)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+async function getUserNotifications(userId) {
+    const notifications = await Notification.find({
+        recipientId: userId,
+        isRead: false
+    })
+        .sort({ updatedAt: -1, createdAt: -1, _id: -1 })
+        .lean();
+
+    return Promise.all(notifications.map(normalizeNotification));
 }
 
-function createNotification({ recipientId, roomId, senderId, text }) {
-    const senderName = getSenderName(senderId);
-    const createdAt = new Date().toISOString();
-    const room = findRoomById(roomId);
-    const roomName = room ? getRoomDisplayName(room, recipientId) : "Chat";
-    const roomType = room?.type || "direct";
+async function createNotification({ recipientId, roomId, senderId, text }) {
+    const senderName = await getSenderName(senderId);
+    const room = await findRoomById(roomId);
+    const formattedRoom = room ? await formatRoomForUser(room, recipientId) : null;
+    const roomName = formattedRoom?.name || "Chat";
+    const roomType = formattedRoom?.type || "direct";
 
-    const existingNotification = memoryStore.notifications.find(notification => {
-        return (
-            notification.recipientId === recipientId &&
-            notification.roomId === roomId &&
-            notification.senderId === senderId &&
-            !notification.isRead
-        );
-    });
+    const existingNotification = await Notification.findOneAndUpdate(
+        {
+            recipientId,
+            roomId,
+            senderId,
+            isRead: false
+        },
+        {
+            $set: {
+                roomName,
+                roomType,
+                senderName,
+                text,
+                isRead: false
+            }
+        },
+        {
+            new: true
+        }
+    ).lean();
 
     if (existingNotification) {
-        existingNotification.roomName = roomName;
-        existingNotification.roomType = roomType;
-        existingNotification.senderName = senderName;
-        existingNotification.text = text;
-        existingNotification.isRead = false;
-        existingNotification.createdAt = createdAt;
-
         return normalizeNotification(existingNotification);
     }
 
-    const notification = {
+    const notification = await Notification.create({
         id: randomUUID(),
         recipientId,
         roomId,
@@ -88,53 +121,48 @@ function createNotification({ recipientId, roomId, senderId, text }) {
         senderId,
         senderName,
         text,
-        isRead: false,
-        createdAt
-    };
-
-    memoryStore.notifications.push(notification);
+        isRead: false
+    });
 
     return normalizeNotification(notification);
 }
 
-function markNotificationAsRead(notificationId, userId) {
-    const notification = memoryStore.notifications.find(item => {
-        return item.id === notificationId && item.recipientId === userId;
-    });
+async function markNotificationAsRead(notificationId, userId) {
+    const result = await Notification.updateOne(
+        {
+            id: notificationId,
+            recipientId: userId
+        },
+        {
+            $set: {
+                isRead: true
+            }
+        }
+    );
 
-    if (!notification) {
-        return false;
-    }
-
-    notification.isRead = true;
-    return true;
+    return result.matchedCount > 0;
 }
 
-function markRoomNotificationsAsRead(roomId, userId) {
+async function markRoomNotificationsAsRead(roomId, userId) {
     return deleteRoomNotifications(roomId, userId);
 }
 
-function deleteNotification(notificationId, userId) {
-    const index = memoryStore.notifications.findIndex(item => {
-        return item.id === notificationId && item.recipientId === userId;
+async function deleteNotification(notificationId, userId) {
+    const result = await Notification.deleteOne({
+        id: notificationId,
+        recipientId: userId
     });
 
-    if (index === -1) {
-        return false;
-    }
-
-    memoryStore.notifications.splice(index, 1);
-    return true;
+    return result.deletedCount > 0;
 }
 
-function deleteRoomNotifications(roomId, userId) {
-    const initialLength = memoryStore.notifications.length;
-
-    memoryStore.notifications = memoryStore.notifications.filter(notification => {
-        return !(notification.roomId === roomId && notification.recipientId === userId);
+async function deleteRoomNotifications(roomId, userId) {
+    const result = await Notification.deleteMany({
+        roomId,
+        recipientId: userId
     });
 
-    return memoryStore.notifications.length !== initialLength;
+    return result.deletedCount > 0;
 }
 
 module.exports = {

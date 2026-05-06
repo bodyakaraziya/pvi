@@ -5,6 +5,11 @@ let roomsCache = [];
 let availableStudents = [];
 let typingTimer = null;
 let isTyping = false;
+let modalMode = "create";
+let messagesCache = new Map();
+let roomMessagesCache = new Map();
+
+const reactionOptions = ["👍", "❤️", "😂", "😮", "✅"];
 
 window.currentRoomId = null;
 
@@ -39,8 +44,6 @@ async function initMessagesPage() {
 
     if (roomIdToOpen && roomsCache.some(room => room.id === roomIdToOpen)) {
         openRoom(roomIdToOpen);
-    } else if (roomsCache.length > 0) {
-        openRoom(roomsCache[0].id);
     } else {
         currentRoomId = null;
         window.currentRoomId = null;
@@ -50,9 +53,16 @@ async function initMessagesPage() {
             `<div class="empty-chat-message">Оберіть або створіть чат</div>`;
     }
 
+    if (!currentRoomId) {
+        setChatOpenState(false);
+    }
+
     document.getElementById("chat-message-form")?.addEventListener("submit", handleSendMessage);
     document.getElementById("chat-message-input")?.addEventListener("input", handleTyping);
+    document.getElementById("chat-messages")?.addEventListener("click", handleMessageInteraction);
     document.getElementById("new-chat-room-btn")?.addEventListener("click", openNewChatModal);
+    document.getElementById("add-room-members-btn")?.addEventListener("click", openAddMembersModal);
+    document.getElementById("close-chat-btn")?.addEventListener("click", closeCurrentRoom);
     document.getElementById("close-new-chat-modal")?.addEventListener("click", closeNewChatModal);
     document.getElementById("cancel-new-chat")?.addEventListener("click", closeNewChatModal);
     document.getElementById("new-chat-form")?.addEventListener("submit", handleCreateRoom);
@@ -96,6 +106,22 @@ function initSocket() {
                     loadNotifications();
                 }
             });
+        }
+    });
+
+    socket.on("message:update", message => {
+        updateRoomLastMessage(message);
+
+        if (message.roomId !== currentRoomId) {
+            return;
+        }
+
+        updateMessageElement(message);
+    });
+
+    socket.on("message:error", ({ message }) => {
+        if (message) {
+            alert(message);
         }
     });
 
@@ -267,6 +293,39 @@ function handleRealtimeRoomUpdate(room) {
     }
 }
 
+function setChatOpenState(isOpen) {
+    document.querySelector(".messages-layout")?.classList.toggle("chat-open", isOpen);
+    document.getElementById("chat-message-input")?.toggleAttribute("disabled", !isOpen);
+    document.getElementById("send-message-btn")?.toggleAttribute("disabled", !isOpen);
+    document.getElementById("close-chat-btn")?.toggleAttribute("hidden", !isOpen);
+    document.getElementById("add-room-members-btn")?.toggleAttribute("hidden", !isOpen);
+}
+
+function closeCurrentRoom() {
+    if (currentRoomId && socket) {
+        socket.emit("room:leave", {
+            roomId: currentRoomId
+        });
+    }
+
+    currentRoomId = null;
+    window.currentRoomId = null;
+    window.activeRoomId = null;
+
+    document.getElementById("chat-room-title").textContent = "Select chat";
+    document.getElementById("chat-members-list").innerHTML = "";
+    document.getElementById("chat-messages").innerHTML =
+        `<div class="empty-chat-message">Оберіть чат зі списку</div>`;
+
+    hideTypingIndicator();
+    setChatOpenState(false);
+    renderRooms(roomsCache);
+
+    if (window.location.pathname === "/messages") {
+        window.history.replaceState(null, "", "/messages");
+    }
+}
+
 function openRoom(roomId) {
     const room = roomsCache.find(item => item.id === roomId);
 
@@ -280,8 +339,21 @@ function openRoom(roomId) {
 
     document.getElementById("chat-room-title").textContent = room.name;
     renderMembers(room.participants);
+    setChatOpenState(true);
     renderRooms(roomsCache);
     hideTypingIndicator();
+
+    const cachedMessages = getCachedRoomMessages(roomId);
+    const container = document.getElementById("chat-messages");
+
+    if (container) {
+        if (cachedMessages.length > 0) {
+            container.innerHTML = cachedMessages.map(message => getMessageHtml(message)).join("");
+            container.scrollTop = container.scrollHeight;
+        } else {
+            container.innerHTML = `<div class="empty-chat-message">Loading messages...</div>`;
+        }
+    }
 
     socket.emit("room:join", {
         roomId
@@ -329,17 +401,38 @@ function renderMembers(participants) {
     }
 
     container.innerHTML = participants.map(user => {
-        const fullName = `${user.firstName} ${user.lastName || ""}`.trim();
+        const fullName = getUserFullName(user);
         const isCurrent = user.id === currentUser.id;
+        const isOnline = user.status === "online";
 
         return `
             <div class="chat-member ${isCurrent ? "current-user" : ""}" data-user-id="${escapeHtml(user.id)}">
-                <span class="chat-user-status ${user.status === "online" ? "status--online" : "status--offline"}"></span>
-                <span>${escapeHtml(fullName)}</span>
+                <span class="chat-member-avatar ${isOnline ? "chat-member-avatar--online" : ""}">
+                    ${escapeHtml(getUserInitials(user))}
+                </span>
+                <span class="chat-member-info">
+                    <span class="chat-member-name">${escapeHtml(fullName)}</span>
+                    <span class="chat-member-status-label">
+                        <span class="chat-user-status ${isOnline ? "status--online" : "status--offline"}"></span>
+                        <span class="chat-member-presence-text">${isOnline ? "online" : "offline"}</span>
+                    </span>
+                </span>
                 ${isCurrent ? `<span class="current-user-label">you</span>` : ""}
             </div>
         `;
     }).join("");
+}
+
+function getUserFullName(user) {
+    return `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown";
+}
+
+function getUserInitials(user) {
+    const firstName = String(user.firstName || "").trim();
+    const lastName = String(user.lastName || "").trim();
+    const initials = `${firstName[0] || ""}${lastName[0] || ""}`.trim();
+
+    return initials || "?";
 }
 
 function updateUserStatus(userId, status) {
@@ -352,6 +445,18 @@ function updateUserStatus(userId, status) {
 
         statusElement.classList.remove("status--online", "status--offline");
         statusElement.classList.add(status === "online" ? "status--online" : "status--offline");
+
+        const statusLabel = element.querySelector(".chat-member-presence-text");
+
+        if (statusLabel) {
+            statusLabel.textContent = status === "online" ? "online" : "offline";
+        }
+
+        const avatar = element.querySelector(".chat-member-avatar");
+
+        if (avatar) {
+            avatar.classList.toggle("chat-member-avatar--online", status === "online");
+        }
     });
 
     roomsCache.forEach(room => {
@@ -369,6 +474,7 @@ function renderMessages(messages) {
     const container = document.getElementById("chat-messages");
     if (!container) return;
 
+    cacheMessages(messages);
     container.innerHTML = messages.map(message => getMessageHtml(message)).join("");
     container.scrollTop = container.scrollHeight;
 }
@@ -388,30 +494,206 @@ function updateMessageStatus(messageId, status) {
         return;
     }
 
-    statusElement.textContent = status;
+    statusElement.innerHTML = getMessageStatusHtml(status);
 }
 
 function appendMessage(message) {
     const container = document.getElementById("chat-messages");
     if (!container) return;
 
+    cacheMessage(message);
     container.insertAdjacentHTML("beforeend", getMessageHtml(message));
     container.scrollTop = container.scrollHeight;
 }
 
+function cacheMessages(messages) {
+    messages.forEach(cacheMessage);
+}
+
+function getCachedRoomMessages(roomId) {
+    const roomMap = roomMessagesCache.get(roomId);
+    if (!roomMap) {
+        return [];
+    }
+
+    return [...roomMap.values()]
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function updateMessageElement(message) {
+    cacheMessage(message);
+
+    const messageElement = document.querySelector(
+        `.chat-message[data-message-id="${CSS.escape(message.id)}"]`
+    );
+
+    if (!messageElement) {
+        appendMessage(message);
+        return;
+    }
+
+    messageElement.outerHTML = getMessageHtml(message);
+}
+
+function cacheMessage(message) {
+    if (!message?.id || !message?.roomId) {
+        return;
+    }
+
+    messagesCache.set(message.id, message);
+
+    const roomMap = roomMessagesCache.get(message.roomId) || new Map();
+    roomMap.set(message.id, message);
+    roomMessagesCache.set(message.roomId, roomMap);
+}
+
 function getMessageHtml(message) {
     const isOwn = message.senderId === currentUser.id;
+    const isDeleted = Boolean(message.deletedAt);
+    const editedLabel = message.editedAt && !isDeleted
+        ? `<span class="message-edited">edited</span>`
+        : "";
+    const actionButtons = isOwn && !isDeleted
+        ? `
+            <button type="button" class="message-action-btn message-edit-btn" data-message-id="${escapeHtml(message.id)}">Edit</button>
+            <button type="button" class="message-action-btn message-delete-btn" data-message-id="${escapeHtml(message.id)}">Delete</button>
+        `
+        : "";
+    const reactionPicker = !isDeleted
+        ? `
+            <div class="message-reaction-picker">
+                ${reactionOptions.map(emoji => `
+                    <button type="button"
+                            class="message-reaction-option"
+                            data-message-id="${escapeHtml(message.id)}"
+                            data-emoji="${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>
+                `).join("")}
+            </div>
+        `
+        : "";
+    const reactionsHtml = getMessageReactionsHtml(message);
 
     return `
         <div class="chat-message ${isOwn ? "chat-message-own" : "chat-message-other"}"
              data-message-id="${escapeHtml(message.id)}">
             <div class="chat-message-author">${escapeHtml(message.senderName)}</div>
-            <div class="chat-message-text">${escapeHtml(message.text)}</div>
-            <div class="chat-message-status message-status">
-                ${escapeHtml(message.status || "sent")}
+            <div class="chat-message-text ${isDeleted ? "chat-message-text--deleted" : ""}">
+                ${escapeHtml(message.text)}
+            </div>
+            <div class="message-footer">
+                <div class="message-reactions-summary">
+                    ${reactionsHtml}
+                </div>
+                <div class="message-meta">
+                    ${editedLabel}
+                    <span class="message-time">${formatMessageTime(message.createdAt)}</span>
+                    ${isOwn ? `<span class="chat-message-status message-status">${getMessageStatusHtml(message.status)}</span>` : ""}
+                </div>
+            </div>
+            <div class="message-actions">
+                ${reactionPicker}
+                ${actionButtons}
             </div>
         </div>
     `;
+}
+
+function getMessageStatusHtml(status) {
+    const normalizedStatus = status === "read" ? "read" : "sent";
+    const label = normalizedStatus === "read" ? "Read" : "Sent";
+    const icon = normalizedStatus === "read" ? "✓✓" : "✓";
+
+    return `<span class="message-status-icon message-status-icon--${normalizedStatus}" title="${label}" aria-label="${label}">${icon}</span>`;
+}
+
+function getMessageReactionsHtml(message) {
+    const reactions = Array.isArray(message.reactions) ? message.reactions : [];
+    const visibleReactions = reactions.filter(reaction => reaction.count > 0);
+
+    if (visibleReactions.length === 0) {
+        return "";
+    }
+
+    return `
+        <div class="message-reactions">
+            ${visibleReactions.map(reaction => {
+                const isOwnReaction = reaction.userIds?.includes(currentUser.id);
+
+                return `
+                    <button type="button"
+                            class="message-reaction ${isOwnReaction ? "active" : ""}"
+                            data-message-id="${escapeHtml(message.id)}"
+                            data-emoji="${escapeHtml(reaction.emoji)}">
+                        <span>${escapeHtml(reaction.emoji)}</span>
+                        <span>${escapeHtml(reaction.count)}</span>
+                    </button>
+                `;
+            }).join("")}
+        </div>
+    `;
+}
+
+function formatMessageTime(createdAt) {
+    if (!createdAt) {
+        return "";
+    }
+
+    return new Date(createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function handleMessageInteraction(event) {
+    const reactionButton = event.target.closest(".message-reaction-option, .message-reaction");
+
+    if (reactionButton) {
+        socket?.emit("message:reaction", {
+            messageId: reactionButton.dataset.messageId,
+            emoji: reactionButton.dataset.emoji
+        });
+        return;
+    }
+
+    const editButton = event.target.closest(".message-edit-btn");
+
+    if (editButton) {
+        const message = messagesCache.get(editButton.dataset.messageId);
+
+        if (!message || message.senderId !== currentUser.id || message.deletedAt) {
+            return;
+        }
+
+        const nextText = prompt("Edit message", message.text);
+
+        if (nextText === null) {
+            return;
+        }
+
+        socket?.emit("message:edit", {
+            messageId: message.id,
+            text: nextText
+        });
+        return;
+    }
+
+    const deleteButton = event.target.closest(".message-delete-btn");
+
+    if (deleteButton) {
+        const message = messagesCache.get(deleteButton.dataset.messageId);
+
+        if (!message || message.senderId !== currentUser.id || message.deletedAt) {
+            return;
+        }
+
+        if (!confirm("Delete this message?")) {
+            return;
+        }
+
+        socket?.emit("message:delete", {
+            messageId: message.id
+        });
+    }
 }
 
 function handleSendMessage(event) {
@@ -484,6 +766,51 @@ function hideTypingIndicator() {
 }
 
 async function openNewChatModal() {
+    modalMode = "create";
+    prepareChatModal({
+        title: "New chat room",
+        submitText: "Create",
+        showNameField: true
+    });
+
+    await openChatModal();
+}
+
+async function openAddMembersModal() {
+    if (!currentRoomId) {
+        return;
+    }
+
+    modalMode = "add";
+    prepareChatModal({
+        title: "Add members",
+        submitText: "Add",
+        showNameField: false
+    });
+
+    await openChatModal();
+}
+
+function prepareChatModal({ title, submitText, showNameField }) {
+    const modalTitle = document.getElementById("new-chat-modal-title");
+    const submitButton = document.getElementById("new-chat-submit-btn");
+    const nameInput = document.getElementById("new-chat-name");
+    const nameGroup = nameInput?.closest(".form-group");
+
+    if (modalTitle) {
+        modalTitle.textContent = title;
+    }
+
+    if (submitButton) {
+        submitButton.textContent = submitText;
+    }
+
+    if (nameGroup) {
+        nameGroup.style.display = showNameField ? "" : "none";
+    }
+}
+
+async function openChatModal() {
     const modal = document.getElementById("new-chat-modal");
     const error = document.getElementById("new-chat-error");
 
@@ -511,6 +838,13 @@ function closeNewChatModal() {
         modal.style.display = "none";
         modal.setAttribute("aria-hidden", "true");
     }
+
+    modalMode = "create";
+    prepareChatModal({
+        title: "New chat room",
+        submitText: "Create",
+        showNameField: true
+    });
 }
 
 async function loadAvailableStudents() {
@@ -530,7 +864,14 @@ async function loadAvailableStudents() {
         return;
     }
 
-    availableStudents = data.students.filter(student => student.id !== currentUser.id);
+    const currentRoom = roomsCache.find(room => room.id === currentRoomId);
+    const existingParticipantIds = new Set(
+        modalMode === "add"
+            ? (currentRoom?.participants || []).map(participant => participant.id)
+            : [currentUser.id]
+    );
+
+    availableStudents = data.students.filter(student => !existingParticipantIds.has(student.id));
 
     if (availableStudents.length === 0) {
         container.innerHTML = `<p>Немає доступних студентів</p>`;
@@ -567,6 +908,16 @@ async function handleCreateRoom(event) {
         return;
     }
 
+    if (modalMode === "add") {
+        handleAddMembers(selectedIds, error);
+        return;
+    }
+
+    if (socket) {
+        handleCreateRoomViaSocket(nameInput?.value || "", selectedIds, error);
+        return;
+    }
+
     const response = await fetch("/api/rooms", {
         method: "POST",
         headers: {
@@ -595,6 +946,55 @@ async function handleCreateRoom(event) {
     if (data.room?.id) {
         openRoom(data.room.id);
     }
+}
+
+function handleCreateRoomViaSocket(name, selectedIds, error) {
+    socket.emit("room:create", {
+        name,
+        participantIds: selectedIds
+    }, async result => {
+        if (!result?.success) {
+            if (error) {
+                error.textContent = result?.message || "Не вдалося створити чат";
+            }
+
+            return;
+        }
+
+        closeNewChatModal();
+        await loadRooms();
+
+        if (result.room?.id) {
+            openRoom(result.room.id);
+        }
+    });
+}
+
+function handleAddMembers(selectedIds, error) {
+    if (!socket || !currentRoomId) {
+        if (error) {
+            error.textContent = "Socket connection is not ready";
+        }
+
+        return;
+    }
+
+    socket.emit("room:participants:add", {
+        roomId: currentRoomId,
+        participantIds: selectedIds
+    }, async result => {
+        if (!result?.success) {
+            if (error) {
+                error.textContent = result?.message || "Не вдалося додати учасників";
+            }
+
+            return;
+        }
+
+        closeNewChatModal();
+        await loadRooms();
+        openRoom(currentRoomId);
+    });
 }
 
 window.openRoomFromNotification = openRoomFromNotification;

@@ -10,8 +10,8 @@ const {
 
 const router = express.Router();
 
-router.get("/", requireApiAuth, (req, res) => {
-    const notifications = getUserNotifications(req.user.id);
+router.get("/", requireApiAuth, async (req, res) => {
+    const notifications = await getUserNotifications(req.user.id);
 
     res.json({
         success: true,
@@ -19,32 +19,32 @@ router.get("/", requireApiAuth, (req, res) => {
     });
 });
 
-router.patch("/:id/read", requireApiAuth, (req, res) => {
-    const success = markNotificationAsRead(req.params.id, req.user.id);
+router.patch("/:id/read", requireApiAuth, async (req, res) => {
+    const success = await markNotificationAsRead(req.params.id, req.user.id);
 
     res.json({
         success
     });
 });
 
-router.patch("/room/:roomId/read", requireApiAuth, (req, res) => {
-    markRoomNotificationsAsRead(req.params.roomId, req.user.id);
+router.patch("/room/:roomId/read", requireApiAuth, async (req, res) => {
+    await markRoomNotificationsAsRead(req.params.roomId, req.user.id);
 
     res.json({
         success: true
     });
 });
 
-router.delete("/room/:roomId", requireApiAuth, (req, res) => {
-    deleteRoomNotifications(req.params.roomId, req.user.id);
+router.delete("/room/:roomId", requireApiAuth, async (req, res) => {
+    await deleteRoomNotifications(req.params.roomId, req.user.id);
 
     res.json({
         success: true
     });
 });
 
-router.delete("/:id", requireApiAuth, (req, res) => {
-    const success = deleteNotification(req.params.id, req.user.id);
+router.delete("/:id", requireApiAuth, async (req, res) => {
+    const success = await deleteNotification(req.params.id, req.user.id);
 
     res.json({
         success

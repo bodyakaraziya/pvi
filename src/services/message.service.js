@@ -1,20 +1,29 @@
 const { randomUUID } = require("crypto");
 const memoryStore = require("../data/memoryStore");
+const Message = require("../models/Message");
+const Room = require("../models/Room");
+const Student = require("../models/Student");
 
-function getSenderName(senderId) {
-    const sender = memoryStore.students.find(student => student.id === senderId);
+async function ensureInitialStudents() {
+    await Student.seedInitial(memoryStore.students);
+}
+
+async function getSenderName(senderId) {
+    await ensureInitialStudents();
+
+    const sender = await Student.findOne({ id: senderId }).lean();
 
     return sender
         ? `${sender.firstName} ${sender.lastName || ""}`.trim()
         : "Unknown";
 }
 
-function findMessageRoom(roomId) {
-    return memoryStore.rooms.find(room => room.id === roomId);
+async function findMessageRoom(roomId) {
+    return Room.findOne({ id: roomId }).lean();
 }
 
-function calculateMessageStatus(message) {
-    const room = findMessageRoom(message.roomId);
+async function calculateMessageStatus(message) {
+    const room = await findMessageRoom(message.roomId);
 
     if (!room) {
         return "sent";
@@ -32,94 +41,339 @@ function calculateMessageStatus(message) {
     return allRecipientsRead ? "read" : "sent";
 }
 
-function normalizeMessage(message) {
-    const readBy = Array.isArray(message.readBy) ? [...message.readBy] : [];
-    const senderName = message.senderName || getSenderName(message.senderId);
+function getReactionEntries(reactions = {}) {
+    if (reactions instanceof Map) {
+        return [...reactions.entries()];
+    }
 
-    message.readBy = readBy;
-    message.senderName = senderName;
-    message.status = calculateMessageStatus(message);
+    return Object.entries(reactions || {});
+}
+
+function getReactionObject(reactions = {}) {
+    return Object.fromEntries(getReactionEntries(reactions));
+}
+
+function normalizeDate(date) {
+    if (!date) {
+        return null;
+    }
+
+    return date instanceof Date ? date.toISOString() : date;
+}
+
+function normalizeReactions(reactions = {}) {
+    return getReactionEntries(reactions)
+        .map(([emoji, userIds]) => {
+            const uniqueUserIds = [...new Set(Array.isArray(userIds) ? userIds : [])];
+
+            return {
+                emoji,
+                count: uniqueUserIds.length,
+                userIds: uniqueUserIds
+            };
+        })
+        .filter(reaction => reaction.count > 0);
+}
+
+function toPlainMessage(message) {
+    if (!message) {
+        return null;
+    }
+
+    if (typeof message.toObject === "function") {
+        return message.toObject({
+            flattenMaps: true
+        });
+    }
 
     return {
-        id: message.id,
-        roomId: message.roomId,
-        senderId: message.senderId,
-        senderName,
-        text: message.text,
-        status: message.status,
-        readBy: [...readBy],
-        createdAt: message.createdAt
+        ...message,
+        reactions: getReactionObject(message.reactions)
     };
 }
 
-function getRoomMessages(roomId) {
-    return memoryStore.messages
-        .filter(message => message.roomId === roomId)
-        .map(normalizeMessage);
+async function normalizeMessage(message) {
+    const plainMessage = toPlainMessage(message);
+    const readBy = Array.isArray(plainMessage.readBy) ? [...plainMessage.readBy] : [];
+    const senderName = plainMessage.senderName || await getSenderName(plainMessage.senderId);
+    const isDeleted = Boolean(plainMessage.deletedAt);
+    const status = await calculateMessageStatus({
+        ...plainMessage,
+        readBy,
+        senderName
+    });
+
+    return {
+        id: plainMessage.id,
+        roomId: plainMessage.roomId,
+        senderId: plainMessage.senderId,
+        senderName,
+        text: isDeleted ? "Повідомлення видалено" : plainMessage.text,
+        status,
+        readBy: [...readBy],
+        createdAt: normalizeDate(plainMessage.createdAt),
+        editedAt: normalizeDate(plainMessage.editedAt),
+        deletedAt: normalizeDate(plainMessage.deletedAt),
+        reactions: normalizeReactions(plainMessage.reactions)
+    };
 }
 
-function getLastRoomMessage(roomId) {
-    const lastMessage = memoryStore.messages
-        .filter(message => message.roomId === roomId)
-        .reduce((latest, message) => {
-            if (!latest) {
-                return message;
-            }
+async function getRoomMessages(roomId) {
+    const messages = await Message.find({ roomId })
+        .sort({ createdAt: 1, _id: 1 })
+        .lean();
 
-            return new Date(message.createdAt) > new Date(latest.createdAt)
-                ? message
-                : latest;
-        }, null);
+    return Promise.all(messages.map(normalizeMessage));
+}
+
+async function getLastRoomMessage(roomId) {
+    const lastMessage = await Message.findOne({ roomId })
+        .sort({ createdAt: -1, _id: -1 })
+        .lean();
 
     return lastMessage ? normalizeMessage(lastMessage) : null;
 }
 
-function createMessage({ roomId, senderId, text }) {
-    const message = {
+async function findMessageById(messageId) {
+    const message = await Message.findOne({ id: messageId }).lean();
+
+    return message ? normalizeMessage(message) : null;
+}
+
+async function createMessage({ roomId, senderId, text }) {
+    const message = await Message.create({
         id: randomUUID(),
         roomId,
         senderId,
-        senderName: getSenderName(senderId),
+        senderName: await getSenderName(senderId),
         text,
         status: "sent",
         readBy: [senderId],
-        createdAt: new Date().toISOString()
-    };
-
-    memoryStore.messages.push(message);
+        reactions: {},
+        editedAt: null,
+        deletedAt: null
+    });
 
     return normalizeMessage(message);
 }
 
-function markRoomMessagesAsRead(roomId, userId) {
-    const updatedMessages = [];
+async function markRoomMessagesAsRead(roomId, userId) {
+    const messagesToUpdate = await Message.find({
+        roomId,
+        senderId: { $ne: userId },
+        readBy: { $ne: userId }
+    })
+        .select("id")
+        .lean();
 
-    memoryStore.messages.forEach(message => {
-        if (message.roomId !== roomId) {
-            return;
+    const messageIds = messagesToUpdate.map(message => message.id);
+
+    if (messageIds.length === 0) {
+        return [];
+    }
+
+    await Message.updateMany(
+        { id: { $in: messageIds } },
+        { $addToSet: { readBy: userId } }
+    );
+
+    const updatedMessages = await Message.find({ id: { $in: messageIds } })
+        .sort({ createdAt: 1, _id: 1 })
+        .lean();
+
+    return Promise.all(updatedMessages.map(normalizeMessage));
+}
+
+async function markMessagesAsRead(roomId, userId) {
+    return markRoomMessagesAsRead(roomId, userId);
+}
+
+async function findMutableMessage(messageId, userId) {
+    const message = await Message.findOne({ id: messageId }).lean();
+
+    if (!message) {
+        return {
+            success: false,
+            message: "Повідомлення не знайдено"
+        };
+    }
+
+    if (message.senderId !== userId) {
+        return {
+            success: false,
+            message: "Можна змінювати тільки власні повідомлення"
+        };
+    }
+
+    if (message.deletedAt) {
+        return {
+            success: false,
+            message: "Повідомлення вже видалено"
+        };
+    }
+
+    return {
+        success: true,
+        message
+    };
+}
+
+async function editMessage({ messageId, userId, text }) {
+    const result = await findMutableMessage(messageId, userId);
+
+    if (!result.success) {
+        return result;
+    }
+
+    const cleanText = String(text || "").trim();
+
+    if (!cleanText) {
+        return {
+            success: false,
+            message: "Повідомлення не може бути порожнім"
+        };
+    }
+
+    const message = await Message.findOneAndUpdate(
+        {
+            id: messageId,
+            senderId: userId,
+            deletedAt: null
+        },
+        {
+            $set: {
+                text: cleanText,
+                editedAt: new Date()
+            }
+        },
+        {
+            new: true
         }
+    ).lean();
 
-        if (message.senderId === userId) {
-            return;
+    if (!message) {
+        return {
+            success: false,
+            message: "Повідомлення не знайдено"
+        };
+    }
+
+    return {
+        success: true,
+        message: await normalizeMessage(message)
+    };
+}
+
+async function deleteMessage({ messageId, userId }) {
+    const result = await findMutableMessage(messageId, userId);
+
+    if (!result.success) {
+        return result;
+    }
+
+    const message = await Message.findOneAndUpdate(
+        {
+            id: messageId,
+            senderId: userId,
+            deletedAt: null
+        },
+        {
+            $set: {
+                text: "",
+                reactions: {},
+                deletedAt: new Date()
+            }
+        },
+        {
+            new: true
         }
+    ).lean();
 
-        if (!message.readBy.includes(userId)) {
-            message.readBy.push(userId);
-            updatedMessages.push(normalizeMessage(message));
+    if (!message) {
+        return {
+            success: false,
+            message: "Повідомлення не знайдено"
+        };
+    }
+
+    return {
+        success: true,
+        message: await normalizeMessage(message)
+    };
+}
+
+async function toggleMessageReaction({ messageId, userId, emoji }) {
+    const message = await Message.findOne({ id: messageId }).lean();
+
+    if (!message || message.deletedAt) {
+        return {
+            success: false,
+            message: "Повідомлення не знайдено"
+        };
+    }
+
+    const cleanEmoji = String(emoji || "").trim();
+    const allowedReactions = ["👍", "❤️", "😂", "😮", "✅"];
+
+    if (!allowedReactions.includes(cleanEmoji)) {
+        return {
+            success: false,
+            message: "Недоступна реакція"
+        };
+    }
+
+    const reactions = getReactionObject(message.reactions);
+    const hadSameReaction = Array.isArray(reactions[cleanEmoji]) &&
+        reactions[cleanEmoji].includes(userId);
+
+    Object.keys(reactions).forEach(itemEmoji => {
+        reactions[itemEmoji] = reactions[itemEmoji].filter(id => id !== userId);
+
+        if (reactions[itemEmoji].length === 0) {
+            delete reactions[itemEmoji];
         }
     });
 
-    return updatedMessages;
-}
+    if (!hadSameReaction) {
+        reactions[cleanEmoji] = [...(reactions[cleanEmoji] || []), userId];
+    }
 
-function markMessagesAsRead(roomId, userId) {
-    return markRoomMessagesAsRead(roomId, userId);
+    const updatedMessage = await Message.findOneAndUpdate(
+        {
+            id: messageId,
+            deletedAt: null
+        },
+        {
+            $set: {
+                reactions
+            }
+        },
+        {
+            new: true
+        }
+    ).lean();
+
+    if (!updatedMessage) {
+        return {
+            success: false,
+            message: "Повідомлення не знайдено"
+        };
+    }
+
+    return {
+        success: true,
+        message: await normalizeMessage(updatedMessage)
+    };
 }
 
 module.exports = {
     getRoomMessages,
     getLastRoomMessage,
+    findMessageById,
     createMessage,
     markRoomMessagesAsRead,
-    markMessagesAsRead
+    markMessagesAsRead,
+    editMessage,
+    deleteMessage,
+    toggleMessageReaction
 };

@@ -28,11 +28,11 @@ function checkIsLoggedIn(req) {
     }
 }
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
     const page = req.query.page || 1;
     const limit = req.query.limit || 5;
 
-    const result = getPaginatedStudents(page, limit);
+    const result = await getPaginatedStudents(page, limit);
 
     return res.json({
         success: true,
@@ -41,8 +41,8 @@ router.get("/", (req, res) => {
     });
 });
 
-router.get("/:id", (req, res) => {
-    const student = findStudentById(req.params.id);
+router.get("/:id", async (req, res) => {
+    const student = await findStudentById(req.params.id);
 
     if (!student) {
         return res.status(404).json({
@@ -57,8 +57,8 @@ router.get("/:id", (req, res) => {
     });
 });
 
-router.post("/", requireApiAuth, (req, res) => {
-    const result = createStudent(req.body);
+router.post("/", requireApiAuth, async (req, res) => {
+    const result = await createStudent(req.body);
 
     if (!result.success) {
         return res.status(400).json(result);
@@ -67,8 +67,8 @@ router.post("/", requireApiAuth, (req, res) => {
     return res.status(201).json(result);
 });
 
-router.put("/:id", requireApiAuth, (req, res) => {
-    const result = updateStudent(req.params.id, req.body);
+router.put("/:id", requireApiAuth, async (req, res) => {
+    const result = await updateStudent(req.params.id, req.body);
 
     if (!result.success) {
         return res.status(400).json(result);
@@ -77,8 +77,8 @@ router.put("/:id", requireApiAuth, (req, res) => {
     return res.json(result);
 });
 
-router.delete("/:id", requireApiAuth, (req, res) => {
-    const success = deleteStudent(req.params.id);
+router.delete("/:id", requireApiAuth, async (req, res) => {
+    const success = await deleteStudent(req.params.id);
 
     if (!success) {
         return res.status(404).json({
@@ -92,8 +92,8 @@ router.delete("/:id", requireApiAuth, (req, res) => {
     });
 });
 
-router.post("/bulk-delete", requireApiAuth, (req, res) => {
-    const success = deleteStudents(req.body.ids);
+router.post("/bulk-delete", requireApiAuth, async (req, res) => {
+    const success = await deleteStudents(req.body.ids);
 
     return res.json({
         success

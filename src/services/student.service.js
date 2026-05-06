@@ -1,44 +1,88 @@
-const { randomUUID } = require("crypto");
 const memoryStore = require("../data/memoryStore");
+const Student = require("../models/Student");
+const Room = require("../models/Room");
 
 const { createDirectRoom } = require("./room.service");
 
+async function ensureInitialStudents() {
+    await Student.seedInitial(memoryStore.students);
+}
+
+function toPlainStudent(student) {
+    if (!student) {
+        return null;
+    }
+
+    if (typeof student.toObject === "function") {
+        return student.toObject();
+    }
+
+    return student;
+}
+
 function getSafeStudent(student) {
-    const { password, ...safeStudent } = student;
-    return safeStudent;
+    const plainStudent = toPlainStudent(student);
+
+    if (!plainStudent) {
+        return null;
+    }
+
+    return {
+        id: plainStudent.id,
+        group: plainStudent.group,
+        firstName: plainStudent.firstName,
+        lastName: plainStudent.lastName,
+        gender: plainStudent.gender,
+        birthday: plainStudent.birthday,
+        role: plainStudent.role,
+        status: plainStudent.status
+    };
 }
 
 function getFullName(student) {
-    return `${student.firstName} ${student.lastName}`.trim();
+    return `${student.firstName} ${student.lastName || ""}`.trim();
 }
 
-function getPaginatedStudents(page = 1, limit = 5) {
+async function getPaginatedStudents(page = 1, limit = 5) {
+    await ensureInitialStudents();
+
     const normalizedPage = Math.max(Number(page) || 1, 1);
     const normalizedLimit = Math.max(Number(limit) || 5, 1);
+    const skip = (normalizedPage - 1) * normalizedLimit;
+    const filter = {
+        role: { $ne: "admin" }
+    };
 
-    const start = (normalizedPage - 1) * normalizedLimit;
-    const end = start + normalizedLimit;
-
-    const students = memoryStore.students
-        .filter(student => student.role !== "admin")
-        .slice(start, end)
-        .map(getSafeStudent);
-
-    const totalStudents = memoryStore.students.filter(student => student.role !== "admin").length;
+    const [students, totalStudents] = await Promise.all([
+        Student.find(filter)
+            .sort({ createdAt: 1, _id: 1 })
+            .skip(skip)
+            .limit(normalizedLimit)
+            .lean(),
+        Student.countDocuments(filter)
+    ]);
     const totalPages = Math.max(Math.ceil(totalStudents / normalizedLimit), 1);
 
     return {
-        students,
+        students: students.map(getSafeStudent),
         totalPages,
         currentPage: normalizedPage
     };
 }
 
-function findStudentById(id) {
-    return memoryStore.students.find(student => student.id === id);
+async function findStudentById(id) {
+    await ensureInitialStudents();
+
+    return Student.findOne({ id }).lean();
 }
 
-function validateStudent(data, excludeId = null) {
+function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function validateStudent(data, excludeId = null) {
+    await ensureInitialStudents();
+
     const errors = {};
     const nameReg = /^[A-Za-zА-Яа-яЇїЄєІіҐґ]([A-Za-zА-Яа-яЇїЄєІіҐґ'’\-]*[A-Za-zА-Яа-яЇїЄєІіҐґ])?$/u;
 
@@ -65,17 +109,17 @@ function validateStudent(data, excludeId = null) {
         errors.birthday = "Рік має бути 1950-2010.";
     }
 
-    const duplicate = memoryStore.students.some(student => {
-        if (student.id === excludeId) {
-            return false;
-        }
+    const duplicateQuery = {
+        firstName: new RegExp(`^${escapeRegExp(String(data.firstName || "").trim())}$`, "i"),
+        lastName: new RegExp(`^${escapeRegExp(String(data.lastName || "").trim())}$`, "i"),
+        group: String(data.group || "").trim()
+    };
 
-        return (
-            String(student.firstName || "").toLowerCase() === String(data.firstName || "").toLowerCase() &&
-            String(student.lastName || "").toLowerCase() === String(data.lastName || "").toLowerCase() &&
-            student.group === data.group
-        );
-    });
+    if (excludeId) {
+        duplicateQuery.id = { $ne: excludeId };
+    }
+
+    const duplicate = await Student.findOne(duplicateQuery).lean();
 
     if (duplicate) {
         errors.duplicate = "Такий студент вже існує в цій групі.";
@@ -84,19 +128,26 @@ function validateStudent(data, excludeId = null) {
     return errors;
 }
 
-function getNextStudentId() {
-    const studentNumbers = memoryStore.students
-        .filter(student => student.id.startsWith("s"))
+async function getNextStudentId() {
+    await ensureInitialStudents();
+
+    const students = await Student.find({
+        id: /^s\d+$/
+    })
+        .select("id")
+        .lean();
+    const studentNumbers = students
         .map(student => Number(student.id.slice(1)))
         .filter(Number.isFinite);
-
     const maxId = studentNumbers.length > 0 ? Math.max(...studentNumbers) : 0;
 
     return `s${maxId + 1}`;
 }
 
-function createStudent(data) {
-    const errors = validateStudent(data);
+async function createStudent(data) {
+    await ensureInitialStudents();
+
+    const errors = await validateStudent(data);
 
     if (Object.keys(errors).length > 0) {
         return {
@@ -105,8 +156,8 @@ function createStudent(data) {
         };
     }
 
-    const student = {
-        id: getNextStudentId(),
+    const student = await Student.create({
+        id: await getNextStudentId(),
         group: String(data.group || "").trim(),
         firstName: String(data.firstName || "").trim(),
         lastName: String(data.lastName || "").trim(),
@@ -115,10 +166,9 @@ function createStudent(data) {
         password: data.birthday,
         role: "student",
         status: "offline"
-    };
+    });
 
-    memoryStore.students.push(student);
-    createDirectRoom("admin", student.id);
+    await createDirectRoom("admin", student.id);
 
     return {
         success: true,
@@ -127,8 +177,10 @@ function createStudent(data) {
     };
 }
 
-function updateStudent(id, data) {
-    const student = findStudentById(id);
+async function updateStudent(id, data) {
+    await ensureInitialStudents();
+
+    const student = await findStudentById(id);
 
     if (!student) {
         return {
@@ -137,7 +189,7 @@ function updateStudent(id, data) {
         };
     }
 
-    const errors = validateStudent(data, id);
+    const errors = await validateStudent(data, id);
 
     if (Object.keys(errors).length > 0) {
         return {
@@ -146,46 +198,85 @@ function updateStudent(id, data) {
         };
     }
 
-    student.group = data.group.trim();
-    student.firstName = data.firstName.trim();
-    student.lastName = data.lastName.trim();
-    student.gender = data.gender;
-    student.birthday = data.birthday;
-    student.password = data.birthday;
+    const updatedStudent = await Student.findOneAndUpdate(
+        { id },
+        {
+            $set: {
+                group: data.group.trim(),
+                firstName: data.firstName.trim(),
+                lastName: data.lastName.trim(),
+                gender: data.gender,
+                birthday: data.birthday,
+                password: data.birthday
+            }
+        },
+        { new: true }
+    ).lean();
 
     return {
         success: true,
-        student: getSafeStudent(student)
+        student: getSafeStudent(updatedStudent)
     };
 }
 
-function deleteStudent(id) {
-    const index = memoryStore.students.findIndex(student => student.id === id);
+async function cleanRoomsAfterStudentDelete(ids) {
+    await Room.deleteMany({
+        type: "direct",
+        participants: { $in: ids }
+    });
 
-    if (index === -1) {
+    await Room.updateMany(
+        {
+            type: "group",
+            participants: { $in: ids }
+        },
+        {
+            $pull: {
+                participants: { $in: ids }
+            }
+        }
+    );
+
+    await Room.deleteMany({
+        type: "group",
+        $expr: {
+            $lt: [{ $size: "$participants" }, 2]
+        }
+    });
+}
+
+async function deleteStudent(id) {
+    await ensureInitialStudents();
+
+    const result = await Student.deleteOne({ id });
+
+    if (result.deletedCount === 0) {
         return false;
     }
 
-    memoryStore.students.splice(index, 1);
-
-    memoryStore.rooms.forEach(room => {
-        room.participants = room.participants.filter(participantId => participantId !== id);
-    });
+    await cleanRoomsAfterStudentDelete([id]);
 
     return true;
 }
 
-function deleteStudents(ids) {
+async function deleteStudents(ids) {
     if (!Array.isArray(ids)) {
         return false;
     }
 
-    ids.forEach(deleteStudent);
+    const result = await Student.deleteMany({
+        id: { $in: ids }
+    });
+
+    if (result.deletedCount > 0) {
+        await cleanRoomsAfterStudentDelete(ids);
+    }
 
     return true;
 }
 
 module.exports = {
+    ensureInitialStudents,
     getPaginatedStudents,
     findStudentById,
     getSafeStudent,

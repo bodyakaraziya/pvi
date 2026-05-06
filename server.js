@@ -12,6 +12,8 @@ const studentRoutes = require("./src/routes/student.routes");
 const roomRoutes = require("./src/routes/room.routes");
 const notificationRoutes = require("./src/routes/notification.routes");
 const registerChatSocket = require("./src/sockets/chat.socket");
+const connectDB = require("./src/config/db");
+const { ensureInitialStudents } = require("./src/services/student.service");
 
 const app = express();
 const server = http.createServer(app);
@@ -32,6 +34,13 @@ app.use("/api/notifications", notificationRoutes);
 
 registerChatSocket(io);
 
-server.listen(PORT, () => {
-    console.log(`Server started: http://localhost:${PORT}`);
-});
+async function startServer() {
+    await connectDB();
+    await ensureInitialStudents();
+
+    server.listen(PORT, () => {
+        console.log(`Server started: http://localhost:${PORT}`);
+    });
+}
+
+startServer();

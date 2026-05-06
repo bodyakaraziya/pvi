@@ -1,11 +1,20 @@
 const cookie = require("cookie");
 const { verifyToken } = require("../middleware/auth.middleware");
-const memoryStore = require("../data/memoryStore");
-const { findRoomById, formatRoomForUser } = require("../services/room.service");
+const Student = require("../models/Student");
+const {
+    findRoomById,
+    formatRoomForUser,
+    createRoom,
+    addRoomParticipants
+} = require("../services/room.service");
 const {
     getRoomMessages,
+    findMessageById,
     createMessage,
-    markRoomMessagesAsRead
+    markRoomMessagesAsRead,
+    editMessage,
+    deleteMessage,
+    toggleMessageReaction
 } = require("../services/message.service");
 const {
     createNotification,
@@ -15,24 +24,23 @@ const {
 const onlineUsers = new Map();
 const activeRoomBySocket = new Map();
 
-function setUserStatus(userId, status) {
-    const user = memoryStore.students.find(student => student.id === userId);
-
-    if (user) {
-        user.status = status;
-    }
+async function setUserStatus(userId, status) {
+    await Student.updateOne(
+        { id: userId },
+        { $set: { status } }
+    );
 }
 
-function addOnlineSocket(userId, socketId) {
+async function addOnlineSocket(userId, socketId) {
     if (!onlineUsers.has(userId)) {
         onlineUsers.set(userId, new Set());
     }
 
     onlineUsers.get(userId).add(socketId);
-    setUserStatus(userId, "online");
+    await setUserStatus(userId, "online");
 }
 
-function removeOnlineSocket(userId, socketId) {
+async function removeOnlineSocket(userId, socketId) {
     if (!onlineUsers.has(userId)) {
         return false;
     }
@@ -42,7 +50,7 @@ function removeOnlineSocket(userId, socketId) {
 
     if (sockets.size === 0) {
         onlineUsers.delete(userId);
-        setUserStatus(userId, "offline");
+        await setUserStatus(userId, "offline");
         return true;
     }
 
@@ -59,13 +67,29 @@ function isUserActiveInRoom(userId, roomId) {
     return [...sockets].some(socketId => activeRoomBySocket.get(socketId) === roomId);
 }
 
-function emitRoomUpdate(io, room) {
-    room.participants.forEach(participantId => {
+async function emitRoomUpdate(io, room) {
+    await Promise.all(room.participants.map(async participantId => {
         io.to(`user:${participantId}`).emit(
             "room:update",
-            formatRoomForUser(room, participantId)
+            await formatRoomForUser(room, participantId)
         );
-    });
+    }));
+}
+
+async function getMessageRoomForUser(messageId, userId) {
+    const message = await findMessageById(messageId);
+
+    if (!message) {
+        return null;
+    }
+
+    const room = await findRoomById(message.roomId);
+
+    if (!room || !room.participants.includes(userId)) {
+        return null;
+    }
+
+    return room;
 }
 
 function registerChatSocket(io) {
@@ -96,10 +120,10 @@ function registerChatSocket(io) {
         }
     });
 
-    io.on("connection", socket => {
+    io.on("connection", async socket => {
         const userId = socket.user.id;
 
-        addOnlineSocket(userId, socket.id);
+        await addOnlineSocket(userId, socket.id);
 
         socket.join(`user:${userId}`);
 
@@ -108,8 +132,8 @@ function registerChatSocket(io) {
             status: "online"
         });
 
-        socket.on("room:join", ({ roomId }) => {
-            const room = findRoomById(roomId);
+        socket.on("room:join", async ({ roomId }) => {
+            const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
                 return;
@@ -124,10 +148,10 @@ function registerChatSocket(io) {
             activeRoomBySocket.set(socket.id, roomId);
             socket.join(`room:${roomId}`);
 
-            const updatedMessages = markRoomMessagesAsRead(roomId, userId);
-            markRoomNotificationsAsRead(roomId, userId);
+            const updatedMessages = await markRoomMessagesAsRead(roomId, userId);
+            await markRoomNotificationsAsRead(roomId, userId);
 
-            const messages = getRoomMessages(roomId);
+            const messages = await getRoomMessages(roomId);
 
             socket.emit("room:history", {
                 roomId,
@@ -142,8 +166,71 @@ function registerChatSocket(io) {
             }
         });
 
-        socket.on("message:send", ({ roomId, text }) => {
-            const room = findRoomById(roomId);
+        socket.on("room:leave", ({ roomId }) => {
+            const activeRoomId = activeRoomBySocket.get(socket.id);
+
+            if (activeRoomId !== roomId) {
+                return;
+            }
+
+            activeRoomBySocket.delete(socket.id);
+            socket.leave(`room:${roomId}`);
+        });
+
+        socket.on("room:participants:add", async ({ roomId, participantIds }, callback) => {
+            const result = await addRoomParticipants({
+                roomId,
+                participantIds: Array.isArray(participantIds) ? participantIds : [],
+                requestedBy: userId
+            });
+
+            if (!result.success) {
+                if (typeof callback === "function") {
+                    callback(result);
+                }
+
+                return;
+            }
+
+            const room = await findRoomById(roomId);
+
+            if (room) {
+                await emitRoomUpdate(io, room);
+            }
+
+            if (typeof callback === "function") {
+                callback(result);
+            }
+        });
+
+        socket.on("room:create", async ({ name, participantIds }, callback) => {
+            const result = await createRoom({
+                name,
+                participantIds: Array.isArray(participantIds) ? participantIds : [],
+                createdBy: userId
+            });
+
+            if (!result.success) {
+                if (typeof callback === "function") {
+                    callback(result);
+                }
+
+                return;
+            }
+
+            const room = await findRoomById(result.room.id);
+
+            if (room) {
+                await emitRoomUpdate(io, room);
+            }
+
+            if (typeof callback === "function") {
+                callback(result);
+            }
+        });
+
+        socket.on("message:send", async ({ roomId, text }) => {
+            const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
                 return;
@@ -155,7 +242,7 @@ function registerChatSocket(io) {
                 return;
             }
 
-            const message = createMessage({
+            const message = await createMessage({
                 roomId,
                 senderId: userId,
                 text: cleanText
@@ -163,13 +250,13 @@ function registerChatSocket(io) {
 
             const statusUpdates = [];
 
-            room.participants.forEach(participantId => {
+            for (const participantId of room.participants) {
                 if (participantId === userId || !isUserActiveInRoom(participantId, roomId)) {
-                    return;
+                    continue;
                 }
 
-                statusUpdates.push(...markRoomMessagesAsRead(roomId, participantId));
-            });
+                statusUpdates.push(...(await markRoomMessagesAsRead(roomId, participantId)));
+            }
 
             const updatedCurrentMessage = statusUpdates.find(item => item.id === message.id);
 
@@ -178,7 +265,7 @@ function registerChatSocket(io) {
             }
 
             io.to(`room:${roomId}`).emit("message:new", message);
-            emitRoomUpdate(io, room);
+            await emitRoomUpdate(io, room);
 
             if (statusUpdates.length > 0) {
                 io.to(`room:${roomId}`).emit("message:status:update", {
@@ -187,16 +274,16 @@ function registerChatSocket(io) {
                 });
             }
 
-            room.participants.forEach(participantId => {
+            for (const participantId of room.participants) {
                 if (participantId === userId) {
-                    return;
+                    continue;
                 }
 
                 if (isUserActiveInRoom(participantId, roomId)) {
-                    return;
+                    continue;
                 }
 
-                const notification = createNotification({
+                const notification = await createNotification({
                     recipientId: participantId,
                     roomId,
                     senderId: userId,
@@ -204,11 +291,79 @@ function registerChatSocket(io) {
                 });
 
                 io.to(`user:${participantId}`).emit("notification:new", notification);
-            });
+            }
         });
 
-        socket.on("typing:start", ({ roomId }) => {
-            const room = findRoomById(roomId);
+        socket.on("message:reaction", async ({ messageId, emoji }) => {
+            const room = await getMessageRoomForUser(messageId, userId);
+
+            if (!room) {
+                return;
+            }
+
+            const result = await toggleMessageReaction({
+                messageId,
+                userId,
+                emoji
+            });
+
+            if (!result.success) {
+                return;
+            }
+
+            io.to(`room:${result.message.roomId}`).emit("message:update", result.message);
+            await emitRoomUpdate(io, room);
+        });
+
+        socket.on("message:edit", async ({ messageId, text }) => {
+            const room = await getMessageRoomForUser(messageId, userId);
+
+            if (!room) {
+                return;
+            }
+
+            const result = await editMessage({
+                messageId,
+                userId,
+                text
+            });
+
+            if (!result.success) {
+                socket.emit("message:error", {
+                    message: result.message
+                });
+                return;
+            }
+
+            io.to(`room:${result.message.roomId}`).emit("message:update", result.message);
+            await emitRoomUpdate(io, room);
+        });
+
+        socket.on("message:delete", async ({ messageId }) => {
+            const room = await getMessageRoomForUser(messageId, userId);
+
+            if (!room) {
+                return;
+            }
+
+            const result = await deleteMessage({
+                messageId,
+                userId
+            });
+
+            if (!result.success) {
+                socket.emit("message:error", {
+                    message: result.message
+                });
+                return;
+            }
+
+            io.to(`room:${result.message.roomId}`).emit("message:update", result.message);
+            await emitRoomUpdate(io, room);
+        });
+
+        socket.on("typing:start", async ({ roomId }) => {
+            const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
                 return;
@@ -223,8 +378,8 @@ function registerChatSocket(io) {
             });
         });
 
-        socket.on("typing:stop", ({ roomId }) => {
-            const room = findRoomById(roomId);
+        socket.on("typing:stop", async ({ roomId }) => {
+            const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
                 return;
@@ -236,15 +391,15 @@ function registerChatSocket(io) {
             });
         });
 
-        socket.on("room:read", ({ roomId }) => {
-            const room = findRoomById(roomId);
+        socket.on("room:read", async ({ roomId }) => {
+            const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
                 return;
             }
 
-            const updatedMessages = markRoomMessagesAsRead(roomId, userId);
-            markRoomNotificationsAsRead(roomId, userId);
+            const updatedMessages = await markRoomMessagesAsRead(roomId, userId);
+            await markRoomNotificationsAsRead(roomId, userId);
 
             if (updatedMessages.length > 0) {
                 io.to(`room:${roomId}`).emit("message:status:update", {
@@ -254,10 +409,10 @@ function registerChatSocket(io) {
             }
         });
 
-        socket.on("disconnect", () => {
+        socket.on("disconnect", async () => {
             activeRoomBySocket.delete(socket.id);
 
-            const becameOffline = removeOnlineSocket(userId, socket.id);
+            const becameOffline = await removeOnlineSocket(userId, socket.id);
 
             if (becameOffline) {
                 io.emit("user:status", {
