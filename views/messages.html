@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS | Messages</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="left-part">
+            <button class="burger" aria-label="Open menu">☰</button>
+            <a href="/students" class="logo">CMS</a>
+        </div>
+
+        <div class="header-controls">
+            <div class="notification-wrapper" id="notification-wrapper" tabindex="0" role="button"
+                aria-label="Notifications" hidden>
+                <div class="notification-bell">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                        class="bell-icon" viewBox="0 0 16 16">
+                        <path
+                            d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6" />
+                    </svg>
+
+                    <span class="notification-indicator" aria-hidden="true"></span>
+                </div>
+
+                <div class="notification-dropdown">
+                    <ul class="notification-list" id="notification-list"></ul>
+                </div>
+            </div>
+
+            <div class="user-profile" id="user-profile" hidden>
+                <img src="/image/avatar.jpg" alt="Your avatar" class="avatar-image">
+                <span class="user-name" id="current-user-name"></span>
+
+                <div class="user-dropdown">
+                    <ul class="user-dropdown-list">
+                        <li><a href="#">Profile</a></li>
+                        <li><button type="button" id="logout-btn">LogOut</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <button class="btn-login-header" id="login-open-btn" type="button">LogIn</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <nav class="sidebar" aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/students">Students</a></li>
+                <li><a href="/tasks">Tasks</a></li>
+            </ul>
+        </nav>
+
+        <div class="content-wrapper">
+            <h1>Messages</h1>
+
+            <main class="content">
+                <section class="messages-layout">
+                    <aside class="chat-room-list">
+                        <div class="chat-room-header">
+                            <h3>Chat room</h3>
+                            <button type="button" id="new-chat-room-btn">+ New chat room</button>
+                        </div>
+
+                        <ul id="chat-room-list">
+                            <!-- JS потім завантажить кімнати -->
+                        </ul>
+                    </aside>
+
+                    <section class="chat-window">
+                        <div class="chat-window-header">
+                            <div class="chat-window-title-row">
+                                <button type="button" id="close-chat-btn" class="chat-back-btn"
+                                    aria-label="Back to chats" title="Back to chats">
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" class="chat-back-icon">
+                                        <path d="M15 6l-6 6 6 6" />
+                                    </svg>
+                                </button>
+                                <h3 id="chat-room-title">Select chat</h3>
+                                <button type="button" id="add-room-members-btn" class="chat-add-members-btn">Add members</button>
+                            </div>
+
+                            <div class="chat-members">
+                                <h4>Members</h4>
+                                <div id="chat-members-list"></div>
+                            </div>
+                        </div>
+
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- JS потім завантажить повідомлення -->
+                        </div>
+
+                        <p class="typing-indicator" id="typing-indicator"></p>
+
+                        <form class="chat-input-form" id="chat-message-form">
+                            <input type="text" id="chat-message-input" placeholder="Type message..." autocomplete="off">
+                            <button type="submit" id="send-message-btn">➤</button>
+                        </form>
+                    </section>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="login-modal" aria-hidden="true" style="display: none;">
+        <div class="modal-window" role="dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Authentication</h2>
+                <button class="btn-close" type="button" id="close-login-modal">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">Login</label>
+                        <input type="text" id="login-username" name="username" class="form-control"
+                            placeholder="Ivan Ivanov" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="login-password" name="password" class="form-control"
+                                placeholder="2006-11-28" required>
+
+                            <button type="button" class="btn-toggle-password"
+                                onclick="togglePasswordVisibility('login-password', this)">
+                                <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                    fill="currentColor" viewBox="0 0 16 16">
+                                    <path
+                                        d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z" />
+                                    <path
+                                        d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0" />
+                                </svg>
+
+                                <svg class="eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg"
+                                    width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                    <path
+                                        d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z" />
+                                    <path
+                                        d="M14.793 14.793a.5.5 0 0 1-.707 0l-14-14a.5.5 0 0 1 .707-.707l14 14a.5.5 0 0 1 0 .707" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-login-cancel" id="cancel-login">Cancel</button>
+                <button type="submit" form="login-form" class="btn-login">Log In</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="new-chat-modal" aria-hidden="true" style="display: none;">
+        <div class="modal-window" role="dialog">
+            <div class="modal-header">
+                <h2 class="modal-title" id="new-chat-modal-title">New chat room</h2>
+                <button class="btn-close" type="button" id="close-new-chat-modal">&times;</button>
+            </div>
+    
+            <div class="modal-body">
+                <form id="new-chat-form">
+                    <div class="form-group">
+                        <label for="new-chat-name">Chat name</label>
+                        <input type="text" id="new-chat-name" class="form-control" placeholder="Group name, optional">
+                    </div>
+    
+                    <div class="form-group">
+                        <label>Students</label>
+                        <div class="new-chat-students" id="new-chat-students-list">
+                            <!-- JS завантажить студентів -->
+                        </div>
+                    </div>
+    
+                    <p class="new-chat-error" id="new-chat-error"></p>
+                </form>
+            </div>
+    
+            <div class="modal-footer">
+                <button type="button" class="btn-login-cancel" id="cancel-new-chat">Cancel</button>
+                <button type="submit" form="new-chat-form" class="btn-login" id="new-chat-submit-btn">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/socket-client.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/common.js"></script>
+    <script src="/js/messages.js"></script>
+
+</body>
+
+</html>
