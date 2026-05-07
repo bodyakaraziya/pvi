@@ -4,6 +4,7 @@ let currentUser = null;
 
 const PAGE_LIMIT = 5;
 
+// Екрануємо дані студентів перед вставкою в HTML-таблицю.
 function escapeHtml(value) {
     return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -28,6 +29,7 @@ function formatDate(dateValue) {
 }
 
 async function ensureAuth() {
+    // Для приватних дій відкриваємо login-modal замість тихого падіння API-запиту.
     currentUser = await getCurrentUser();
 
     if (!currentUser) {
@@ -39,6 +41,7 @@ async function ensureAuth() {
 }
 
 function updateStudentStatusInTable(userId, status) {
+    // Realtime-статус приходить із socket і точково оновлює рядок таблиці.
     const statusDot = document.querySelector(`[data-student-status-id="${CSS.escape(String(userId))}"]`);
 
     if (!statusDot) {
@@ -54,6 +57,7 @@ function updateStudentStatusInTable(userId, status) {
 }
 
 async function loadStudents(page = 1) {
+    // Таблиця завантажує тільки одну сторінку, щоб pagination залишався швидким.
     currentPage = page;
 
     const response = await fetch(`/api/students?page=${page}&limit=${PAGE_LIMIT}`);
@@ -69,6 +73,7 @@ async function loadStudents(page = 1) {
 }
 
 function renderStudents(students) {
+    // Розмітка таблиці створюється з безпечних DTO без паролів.
     const tableBody = document.getElementById("students-table-body");
 
     if (!tableBody) {
@@ -184,6 +189,7 @@ function closeModal(modalId) {
 }
 
 async function openAddModal() {
+    // Перед створенням студента перевіряємо логін і готуємо форму в режимі create.
     const isAuth = await ensureAuth();
 
     if (!isAuth) {
@@ -218,6 +224,7 @@ function closeAddModal() {
 }
 
 async function openEditModal(studentId) {
+    // Для редагування спочатку підтягуємо актуальні дані студента з API.
     const isAuth = await ensureAuth();
 
     if (!isAuth) {
@@ -257,6 +264,7 @@ async function openEditModal(studentId) {
 }
 
 async function handleStudentFormSubmit(event) {
+    // Одна форма працює і на створення, і на редагування залежно від data-mode кнопки.
     event.preventDefault();
 
     const isAuth = await ensureAuth();
@@ -308,6 +316,7 @@ async function handleStudentFormSubmit(event) {
 }
 
 async function openDeleteModal(studentId, studentName) {
+    // ID зберігаємо окремо, щоб confirm-кнопка знала, кого видаляти.
     const isAuth = await ensureAuth();
 
     if (!isAuth) {
@@ -351,6 +360,7 @@ async function confirmDeleteStudent() {
 }
 
 async function confirmDeleteAll() {
+    // Масове видалення бере тільки вибрані checkbox-рядки.
     const isAuth = await ensureAuth();
 
     if (!isAuth) {
@@ -392,6 +402,7 @@ async function confirmDeleteAll() {
 }
 
 function initStudentsPage() {
+    // Усі listeners сторінки реєструються в одному місці після готовності DOM.
     loadStudents();
 
     document.getElementById("add-student-btn")?.addEventListener("click", openAddModal);

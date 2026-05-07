@@ -13,6 +13,7 @@ const { requireApiAuth, verifyToken } = require("../middleware/auth.middleware")
 
 const router = express.Router();
 
+// Для списку студентів сторінка публічна, але відповідь додатково каже UI, чи користувач увійшов.
 function checkIsLoggedIn(req) {
     const token = req.cookies?.token;
 
@@ -28,6 +29,7 @@ function checkIsLoggedIn(req) {
     }
 }
 
+// Пагінований список студентів використовується таблицею на сторінці /students.
 router.get("/", async (req, res) => {
     const page = req.query.page || 1;
     const limit = req.query.limit || 5;
@@ -41,6 +43,7 @@ router.get("/", async (req, res) => {
     });
 });
 
+// Читання одного студента лишається публічним, бо форма редагування сама перевіряє авторизацію.
 router.get("/:id", async (req, res) => {
     const student = await findStudentById(req.params.id);
 
@@ -57,6 +60,7 @@ router.get("/:id", async (req, res) => {
     });
 });
 
+// Створення, редагування та видалення студентів доступні тільки авторизованому користувачу.
 router.post("/", requireApiAuth, async (req, res) => {
     const result = await createStudent(req.body);
 

@@ -4,6 +4,7 @@ const { requireApiAuth } = require("../middleware/auth.middleware");
 
 const router = express.Router();
 
+// Логін приймає ім'я/ID студента й пароль, а після успіху кладе JWT у cookie.
 router.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
@@ -32,6 +33,7 @@ router.post("/login", async (req, res) => {
     });
 });
 
+// Logout достатньо очистити cookie з токеном: стан сесії на сервері не зберігається.
 router.post("/logout", (req, res) => {
     res.clearCookie("token");
 
@@ -40,6 +42,7 @@ router.post("/logout", (req, res) => {
     });
 });
 
+// Поточний користувач береться з перевіреного JWT, який middleware записав у req.user.
 router.get("/me", requireApiAuth, (req, res) => {
     return res.json({
         id: req.user.id,

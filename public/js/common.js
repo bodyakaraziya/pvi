@@ -1,4 +1,5 @@
 function initBellNavigation() {
+    // Клік по дзвіночку веде в повідомлення, але кліки всередині dropdown не закривають його переходом.
     const notificationWrapper = document.getElementById("notification-wrapper");
 
     if (!notificationWrapper) {
@@ -19,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function loadNotifications() {
+    // Сповіщення завантажуються для header-дзвіночка на всіх приватних сторінках.
     const notificationList = document.querySelector(".notification-dropdown .notification-list");
     const notificationIndicator = document.querySelector(".notification-indicator");
 
@@ -41,6 +43,7 @@ async function loadNotifications() {
 }
 
 function renderNotifications(notifications = []) {
+    // У dropdown показуємо тільки непрочитані повідомлення, прочитані не займають місце в UI.
     const notificationList = document.querySelector(".notification-dropdown .notification-list");
     const notificationIndicator = document.querySelector(".notification-indicator");
 
@@ -117,6 +120,7 @@ function renderNotifications(notifications = []) {
 }
 
 function getNotificationTitle(notification) {
+    // Для group-чату заголовком є назва кімнати, для direct — ім'я відправника.
     if (isGroupNotification(notification)) {
         return notification.roomName || "Group chat";
     }
@@ -139,6 +143,7 @@ function isGroupNotification(notification) {
 }
 
 async function addRealtimeNotification(notification) {
+    // Якщо користувач уже дивиться цей чат, нове сповіщення одразу прибираємо з дзвіночка.
     const currentPath = window.location.pathname;
     const currentRoomId = window.currentRoomId || null;
 
@@ -181,6 +186,7 @@ async function addRealtimeNotification(notification) {
 }
 
 function escapeHtml(value) {
+    // Захищає dropdown від HTML у тексті повідомлення або назві кімнати.
     return String(value ?? "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
@@ -196,12 +202,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 function refreshStudentsTable() {
+    // Викликається глобальним socket-client після reconnect або зміни статусу.
     if (typeof loadStudents === "function" && typeof currentPage !== "undefined") {
         loadStudents(currentPage);
     }
 }
 
 function initBurgerMenu() {
+    // На мобільному відкриваємо sidebar, на desktop — згортаємо його.
     const burgerButton = document.querySelector(".burger");
 
     if (!burgerButton) {

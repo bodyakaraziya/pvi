@@ -21,7 +21,9 @@ const {
     markRoomNotificationsAsRead
 } = require("../services/notification.service");
 
+// userId -> Set(socketId): один користувач може мати кілька відкритих вкладок.
 const onlineUsers = new Map();
+// socketId -> roomId: показує, який чат реально відкритий у конкретній вкладці.
 const activeRoomBySocket = new Map();
 
 async function setUserStatus(userId, status) {
@@ -32,6 +34,7 @@ async function setUserStatus(userId, status) {
 }
 
 async function addOnlineSocket(userId, socketId) {
+    // Перший активний socket робить користувача online.
     if (!onlineUsers.has(userId)) {
         onlineUsers.set(userId, new Set());
     }
@@ -48,6 +51,7 @@ async function removeOnlineSocket(userId, socketId) {
     const sockets = onlineUsers.get(userId);
     sockets.delete(socketId);
 
+    // Offline ставимо тільки після закриття останньої вкладки користувача.
     if (sockets.size === 0) {
         onlineUsers.delete(userId);
         await setUserStatus(userId, "offline");
@@ -68,6 +72,7 @@ function isUserActiveInRoom(userId, roomId) {
 }
 
 async function emitRoomUpdate(io, room) {
+    // Кожен учасник отримує кімнату у власному форматі, бо назва direct-чату персональна.
     await Promise.all(room.participants.map(async participantId => {
         io.to(`user:${participantId}`).emit(
             "room:update",
@@ -77,6 +82,7 @@ async function emitRoomUpdate(io, room) {
 }
 
 async function getMessageRoomForUser(messageId, userId) {
+    // Перед реакціями/редагуванням/видаленням перевіряємо, що користувач належить до кімнати.
     const message = await findMessageById(messageId);
 
     if (!message) {
@@ -93,6 +99,7 @@ async function getMessageRoomForUser(messageId, userId) {
 }
 
 function registerChatSocket(io) {
+    // Socket.IO теж авторизується через cookie з JWT, як і звичайні HTTP-запити.
     io.use((socket, next) => {
         try {
             const cookieHeader = socket.handshake.headers.cookie;
@@ -123,6 +130,7 @@ function registerChatSocket(io) {
     io.on("connection", async socket => {
         const userId = socket.user.id;
 
+        // Персональна кімната user:<id> потрібна для приватних оновлень і сповіщень.
         await addOnlineSocket(userId, socket.id);
 
         socket.join(`user:${userId}`);
@@ -133,6 +141,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("room:join", async ({ roomId }) => {
+            // Користувач може зайти тільки в кімнату, де він є учасником.
             const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
@@ -148,6 +157,7 @@ function registerChatSocket(io) {
             activeRoomBySocket.set(socket.id, roomId);
             socket.join(`room:${roomId}`);
 
+            // При відкритті кімнати всі її повідомлення та сповіщення вважаються прочитаними.
             const updatedMessages = await markRoomMessagesAsRead(roomId, userId);
             await markRoomNotificationsAsRead(roomId, userId);
 
@@ -178,6 +188,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("room:participants:add", async ({ roomId, participantIds }, callback) => {
+            // callback повертає результат саме тому клієнту, який ініціював додавання.
             const result = await addRoomParticipants({
                 roomId,
                 participantIds: Array.isArray(participantIds) ? participantIds : [],
@@ -204,6 +215,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("room:create", async ({ name, participantIds }, callback) => {
+            // Створення через socket дає realtime-оновлення всім учасникам без перезавантаження.
             const result = await createRoom({
                 name,
                 participantIds: Array.isArray(participantIds) ? participantIds : [],
@@ -230,6 +242,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("message:send", async ({ roomId, text }) => {
+            // Будь-яка дія з повідомленням починається з перевірки доступу до кімнати.
             const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
@@ -250,6 +263,7 @@ function registerChatSocket(io) {
 
             const statusUpdates = [];
 
+            // Якщо отримувач зараз дивиться цю кімнату, повідомлення одразу стає прочитаним.
             for (const participantId of room.participants) {
                 if (participantId === userId || !isUserActiveInRoom(participantId, roomId)) {
                     continue;
@@ -283,6 +297,7 @@ function registerChatSocket(io) {
                     continue;
                 }
 
+                // Сповіщення створюємо тільки для тих, хто не має цей чат відкритим.
                 const notification = await createNotification({
                     recipientId: participantId,
                     roomId,
@@ -295,6 +310,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("message:reaction", async ({ messageId, emoji }) => {
+            // Реакції broadcast-яться всій кімнаті, бо змінюють стан конкретного повідомлення.
             const room = await getMessageRoomForUser(messageId, userId);
 
             if (!room) {
@@ -316,6 +332,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("message:edit", async ({ messageId, text }) => {
+            // Service-шар додатково перевіряє, що редагує саме автор повідомлення.
             const room = await getMessageRoomForUser(messageId, userId);
 
             if (!room) {
@@ -340,6 +357,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("message:delete", async ({ messageId }) => {
+            // Видалення м'яке: повідомлення лишається в історії, але текст замінюється.
             const room = await getMessageRoomForUser(messageId, userId);
 
             if (!room) {
@@ -363,6 +381,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("typing:start", async ({ roomId }) => {
+            // Typing-події не зберігаються в базі, а лише тимчасово транслюються іншим учасникам.
             const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {
@@ -392,6 +411,7 @@ function registerChatSocket(io) {
         });
 
         socket.on("room:read", async ({ roomId }) => {
+            // Клієнт викликає це після відкриття кімнати або отримання нового повідомлення.
             const room = await findRoomById(roomId);
 
             if (!room || !room.participants.includes(userId)) {

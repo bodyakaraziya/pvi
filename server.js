@@ -21,20 +21,25 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
+// Базові middleware: JSON потрібен для API, cookieParser — для читання JWT з cookie.
 app.use(express.json());
 app.use(cookieParser());
 
+// Публічні статичні файли: CSS, JS, зображення та manifest.
 app.use(express.static(path.join(__dirname, "public")));
 
+// Розділяємо маршрути за відповідальністю: сторінки, авторизація та окремі API-модулі.
 app.use("/", pageRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+// Socket.IO підключається до того самого HTTP-сервера, що й Express.
 registerChatSocket(io);
 
 async function startServer() {
+    // Спочатку підключаємо базу та створюємо початкових студентів, потім приймаємо запити.
     await connectDB();
     await ensureInitialStudents();
 

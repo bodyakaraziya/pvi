@@ -4,6 +4,7 @@ const Room = require("../models/Room");
 const Student = require("../models/Student");
 const { getLastRoomMessage } = require("./message.service");
 
+// Кімнати сіються один раз на процес, щоб паралельні запити не створили дублікати.
 let initialRoomsPromise = null;
 
 function normalizeDate(date) {
@@ -27,6 +28,7 @@ function toPlainRoom(room) {
 }
 
 async function ensureInitialRooms() {
+    // initialRoomsPromise запам'ятовує перший запуск seed-логіки й повторно чекає той самий Promise.
     if (!initialRoomsPromise) {
         initialRoomsPromise = (async () => {
             await ensureInitialStudents();
@@ -65,6 +67,7 @@ async function ensureInitialStudents() {
     await Student.seedInitial(memoryStore.students);
 }
 
+// У відповіді по учаснику не віддаємо пароль та інші службові поля.
 async function getSafeParticipant(participantId) {
     await ensureInitialStudents();
 
@@ -84,6 +87,7 @@ async function getSafeParticipant(participantId) {
 }
 
 async function formatRoomForUser(room, userId) {
+    // Назва direct-чату залежить від того, хто саме відкриває кімнату.
     const plainRoom = toPlainRoom(room);
     const participants = (await Promise.all(
         plainRoom.participants.map(getSafeParticipant)
@@ -116,6 +120,7 @@ function getRoomDisplayName(room, userId, formattedParticipants = null) {
 }
 
 async function findDirectRoom(participantIds) {
+    // Direct-чат між однаковими двома людьми має існувати в одному екземплярі.
     await ensureInitialRooms();
 
     return Room.findOne({
@@ -135,6 +140,7 @@ async function getUserRooms(userId) {
         rooms.map(room => formatRoomForUser(room, userId))
     );
 
+    // Найактивніші чати показуємо першими: за останнім повідомленням або датою створення.
     return formattedRooms.sort((a, b) => {
         const aDate = a.lastMessage?.createdAt || a.createdAt;
         const bDate = b.lastMessage?.createdAt || b.createdAt;
@@ -153,6 +159,7 @@ async function createRoom({ name, participantIds = [], createdBy }) {
     await ensureInitialRooms();
     await ensureInitialStudents();
 
+    // Автор завжди входить до кімнати, дублікати учасників відкидаємо.
     const uniqueParticipants = [...new Set([createdBy, ...participantIds].filter(Boolean))];
 
     if (uniqueParticipants.length < 2) {
@@ -182,6 +189,7 @@ async function createRoom({ name, participantIds = [], createdBy }) {
     const roomType = uniqueParticipants.length === 2 ? "direct" : "group";
 
     if (roomType === "direct") {
+        // Якщо direct-кімната вже є, повертаємо її замість створення другої.
         const existingRoom = await findDirectRoom(uniqueParticipants);
 
         if (existingRoom) {
@@ -255,6 +263,7 @@ async function addRoomParticipants({ roomId, participantIds = [], requestedBy })
         participants: nextParticipants
     };
 
+    // Direct-чат автоматично стає груповим, коли до нього додають третього учасника.
     if (nextParticipants.length > 2) {
         updates.type = "group";
 

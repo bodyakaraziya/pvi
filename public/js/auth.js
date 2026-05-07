@@ -1,4 +1,5 @@
 async function getCurrentUser() {
+    // /me повертає null-поведінку для гостя, тому UI може тихо перемкнутись у public state.
     try {
         const response = await fetch("/api/auth/me");
 
@@ -14,6 +15,7 @@ async function getCurrentUser() {
 }
 
 function togglePasswordVisibility(inputId, button) {
+    // Кнопка перемикає тип input і синхронізує іконки відкритого/закритого ока.
     const input = document.getElementById(inputId);
 
     if (!input) {
@@ -58,6 +60,7 @@ function closeLoginModal() {
 }
 
 async function updateAuthUI(){
+    // Header показує або кнопку login, або профіль користувача зі сповіщеннями.
     const user = await getCurrentUser();
 
     const loginButton = document.getElementById("login-open-btn");
@@ -84,6 +87,7 @@ async function updateAuthUI(){
 }
 
 async function handleLoginSubmit(event) {
+    // Після успішного логіну cookie виставляє сервер, клієнту достатньо перезавантажити сторінку.
     event.preventDefault();
 
     const username = document.getElementById("login-username")?.value.trim();
@@ -119,6 +123,7 @@ async function handleLoginSubmit(event) {
 }
 
 async function logout() {
+    // Сервер очищає cookie, після чого повертаємо користувача на публічну сторінку.
     try {
         await fetch("/api/auth/logout", {
             method: "POST"
@@ -131,6 +136,7 @@ async function logout() {
 }
 
 function initAuth() {
+    // Авторизаційний modal підключається на всіх сторінках, де є спільний header.
     updateAuthUI();
 
     const loginOpenButton = document.getElementById("login-open-btn");

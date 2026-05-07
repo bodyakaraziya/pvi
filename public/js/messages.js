@@ -6,6 +6,7 @@ let availableStudents = [];
 let typingTimer = null;
 let isTyping = false;
 let modalMode = "create";
+// Кеші потрібні, щоб швидко оновлювати повідомлення без повного перезавантаження кімнати.
 let messagesCache = new Map();
 let roomMessagesCache = new Map();
 
@@ -13,6 +14,7 @@ const reactionOptions = ["👍", "❤️", "😂", "😮", "✅"];
 
 window.currentRoomId = null;
 
+// Екрануємо користувацький текст перед вставкою в HTML, щоб уникнути XSS.
 function escapeHtml(value) {
     return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -23,6 +25,7 @@ function escapeHtml(value) {
 }
 
 async function initMessagesPage() {
+    // Сторінка повідомлень приватна: без користувача повертаємо на /students.
     currentUser = await getCurrentUser();
 
     if (!currentUser) {
@@ -72,6 +75,7 @@ function initSocket() {
     socket = window.globalSocket || io();
     window.globalSocket = socket;
 
+    // Захист від повторної реєстрації handlers після reload частин сторінки.
     if (socket.__messagesHandlersAttached) {
         return;
     }
@@ -81,6 +85,7 @@ function initSocket() {
     socket.on("connect", () => {});
 
     socket.on("room:history", ({ roomId, messages }) => {
+        // Ігноруємо історію неактивної кімнати, якщо користувач уже перейшов в інший чат.
         if (roomId !== currentRoomId) return;
         renderMessages(messages);
     });
@@ -163,6 +168,7 @@ function initSocket() {
 }
 
 async function loadRooms() {
+    // Список кімнат приходить вже відформатованим для поточного користувача.
     const response = await fetch("/api/rooms");
     const data = await response.json();
 
@@ -201,6 +207,7 @@ function isRoomOnline(room) {
 }
 
 function renderRooms(rooms) {
+    // Ліва колонка чату перемальовується після нових повідомлень, статусів і створення кімнат.
     const list = document.getElementById("chat-room-list");
     if (!list) return;
 
@@ -253,6 +260,7 @@ function getRoomLastMessagePreview(room) {
 }
 
 function updateRoomLastMessage(message) {
+    // Останнє повідомлення впливає і на прев'ю, і на порядок кімнат у списку.
     if (!message?.roomId) {
         return;
     }
@@ -269,6 +277,7 @@ function updateRoomLastMessage(message) {
 }
 
 function handleRealtimeRoomUpdate(room) {
+    // Оновлення кімнати може прийти як для вже відомого чату, так і для щойно створеного.
     if (!room?.id) {
         return;
     }
@@ -327,6 +336,7 @@ function closeCurrentRoom() {
 }
 
 function openRoom(roomId) {
+    // Відкриття кімнати синхронізує UI, URL-стан, Socket.IO room і прочитаність сповіщень.
     const room = roomsCache.find(item => item.id === roomId);
 
     if (!room || !socket) {
@@ -373,6 +383,7 @@ function openRoom(roomId) {
 }
 
 async function openRoomFromNotification(roomId) {
+    // Якщо перехід прийшов зі сповіщення, потрібної кімнати може ще не бути в кеші.
     if (!roomsCache.some(room => room.id === roomId)) {
         await loadRooms();
     }
@@ -436,6 +447,7 @@ function getUserInitials(user) {
 }
 
 function updateUserStatus(userId, status) {
+    // Статус треба оновити і в списку учасників відкритого чату, і в кеші кімнат.
     document.querySelectorAll(`[data-user-id="${CSS.escape(String(userId))}"]`).forEach(element => {
         const statusElement = element.querySelector(".chat-user-status");
 
@@ -471,6 +483,7 @@ function updateUserStatus(userId, status) {
 }
 
 function renderMessages(messages) {
+    // Повна історія кімнати замінює DOM і паралельно оновлює локальний кеш повідомлень.
     const container = document.getElementById("chat-messages");
     if (!container) return;
 
@@ -521,6 +534,7 @@ function getCachedRoomMessages(roomId) {
 }
 
 function updateMessageElement(message) {
+    // Після редагування, видалення або реакції перемальовуємо тільки одне повідомлення.
     cacheMessage(message);
 
     const messageElement = document.querySelector(
@@ -536,6 +550,7 @@ function updateMessageElement(message) {
 }
 
 function cacheMessage(message) {
+    // Один кеш шукає повідомлення за id, другий тримає повідомлення окремо для кожної кімнати.
     if (!message?.id || !message?.roomId) {
         return;
     }
@@ -548,6 +563,7 @@ function cacheMessage(message) {
 }
 
 function getMessageHtml(message) {
+    // HTML повідомлення залежить від автора, стану видалення, реакцій і статусу прочитання.
     const isOwn = message.senderId === currentUser.id;
     const isDeleted = Boolean(message.deletedAt);
     const editedLabel = message.editedAt && !isDeleted
@@ -645,6 +661,7 @@ function formatMessageTime(createdAt) {
 }
 
 function handleMessageInteraction(event) {
+    // Делегування кліків дозволяє працювати з повідомленнями, доданими після першого render.
     const reactionButton = event.target.closest(".message-reaction-option, .message-reaction");
 
     if (reactionButton) {
@@ -697,6 +714,7 @@ function handleMessageInteraction(event) {
 }
 
 function handleSendMessage(event) {
+    // Повідомлення надсилається через socket, щоб усі учасники отримали його в realtime.
     event.preventDefault();
 
     const input = document.getElementById("chat-message-input");
@@ -720,6 +738,7 @@ function handleSendMessage(event) {
 }
 
 function handleTyping() {
+    // Typing indicator має debounce: після паузи в наборі відправляємо typing:stop.
     if (!socket || !currentRoomId) {
         return;
     }
@@ -766,6 +785,7 @@ function hideTypingIndicator() {
 }
 
 async function openNewChatModal() {
+    // Один modal використовується у двох режимах: створення кімнати та додавання учасників.
     modalMode = "create";
     prepareChatModal({
         title: "New chat room",
@@ -848,6 +868,7 @@ function closeNewChatModal() {
 }
 
 async function loadAvailableStudents() {
+    // У списку не показуємо себе або вже доданих учасників поточної кімнати.
     const container = document.getElementById("new-chat-students-list");
 
     if (!container) {
@@ -891,6 +912,7 @@ async function loadAvailableStudents() {
 }
 
 async function handleCreateRoom(event) {
+    // Обробник форми сам вирішує, створити новий чат чи додати учасників у поточний.
     event.preventDefault();
 
     const nameInput = document.getElementById("new-chat-name");
@@ -949,6 +971,7 @@ async function handleCreateRoom(event) {
 }
 
 function handleCreateRoomViaSocket(name, selectedIds, error) {
+    // Socket-варіант дає миттєве оновлення кімнат для всіх учасників.
     socket.emit("room:create", {
         name,
         participantIds: selectedIds
@@ -971,6 +994,7 @@ function handleCreateRoomViaSocket(name, selectedIds, error) {
 }
 
 function handleAddMembers(selectedIds, error) {
+    // Додавання учасників іде тільки через socket, бо кімната має оновитись у всіх відкритих клієнтах.
     if (!socket || !currentRoomId) {
         if (error) {
             error.textContent = "Socket connection is not ready";

@@ -4,6 +4,7 @@ const Notification = require("../models/Notification");
 const Student = require("../models/Student");
 const { findRoomById, formatRoomForUser } = require("./room.service");
 
+// Дати віддаємо у форматі ISO, щоб браузер стабільно сортував і показував їх.
 function normalizeDate(date) {
     if (!date) {
         return null;
@@ -39,6 +40,7 @@ async function getSenderName(senderId) {
 }
 
 async function getNotificationRoomMeta(notification) {
+    // Якщо кімната ще існує, беремо актуальну назву для конкретного отримувача.
     const room = await findRoomById(notification.roomId);
     const formattedRoom = room ? await formatRoomForUser(room, notification.recipientId) : null;
 
@@ -51,6 +53,7 @@ async function getNotificationRoomMeta(notification) {
 }
 
 async function normalizeNotification(notification) {
+    // Нормалізація зберігає fallback-дані, щоб старі сповіщення не ламали UI після змін кімнати.
     const plainNotification = toPlainNotification(notification);
     const senderName = plainNotification.senderName || await getSenderName(plainNotification.senderId);
     const { roomName, roomType } = await getNotificationRoomMeta(plainNotification);
@@ -70,6 +73,7 @@ async function normalizeNotification(notification) {
 }
 
 async function getUserNotifications(userId) {
+    // Дзвіночок працює тільки з непрочитаними сповіщеннями.
     const notifications = await Notification.find({
         recipientId: userId,
         isRead: false
@@ -87,6 +91,7 @@ async function createNotification({ recipientId, roomId, senderId, text }) {
     const roomName = formattedRoom?.name || "Chat";
     const roomType = formattedRoom?.type || "direct";
 
+    // Для одного відправника в одній кімнаті оновлюємо існуюче непрочитане сповіщення.
     const existingNotification = await Notification.findOneAndUpdate(
         {
             recipientId,
@@ -144,6 +149,7 @@ async function markNotificationAsRead(notificationId, userId) {
 }
 
 async function markRoomNotificationsAsRead(roomId, userId) {
+    // Відкриття кімнати прибирає всі її сповіщення з дзвіночка.
     return deleteRoomNotifications(roomId, userId);
 }
 
