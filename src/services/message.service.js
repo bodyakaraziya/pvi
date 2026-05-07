@@ -4,7 +4,6 @@ const Message = require("../models/Message");
 const Room = require("../models/Room");
 const Student = require("../models/Student");
 
-// Стартові студенти потрібні для коректного відображення імен авторів повідомлень.
 async function ensureInitialStudents() {
     await Student.seedInitial(memoryStore.students);
 }
@@ -23,7 +22,6 @@ async function findMessageRoom(roomId) {
     return Room.findOne({ id: roomId }).lean();
 }
 
-// Статус "read" ставиться тільки тоді, коли всі отримувачі повідомлення прочитали його.
 async function calculateMessageStatus(message) {
     const room = await findMessageRoom(message.roomId);
 
@@ -43,7 +41,6 @@ async function calculateMessageStatus(message) {
     return allRecipientsRead ? "read" : "sent";
 }
 
-// Mongoose Map і звичайний object мають різний вигляд, тому приводимо реакції до одного формату.
 function getReactionEntries(reactions = {}) {
     if (reactions instanceof Map) {
         return [...reactions.entries()];
@@ -64,7 +61,6 @@ function normalizeDate(date) {
     return date instanceof Date ? date.toISOString() : date;
 }
 
-// API повертає реакції списком із кількістю та користувачами, щоб UI міг швидко їх намалювати.
 function normalizeReactions(reactions = {}) {
     return getReactionEntries(reactions)
         .map(([emoji, userIds]) => {
@@ -96,7 +92,6 @@ function toPlainMessage(message) {
     };
 }
 
-// Нормалізація приховує технічні поля MongoDB і однаково форматує повідомлення для HTTP та Socket.IO.
 async function normalizeMessage(message) {
     const plainMessage = toPlainMessage(message);
     const readBy = Array.isArray(plainMessage.readBy) ? [...plainMessage.readBy] : [];
@@ -146,7 +141,6 @@ async function findMessageById(messageId) {
 }
 
 async function createMessage({ roomId, senderId, text }) {
-    // Автор автоматично додається в readBy, бо він "прочитав" власне повідомлення при створенні.
     const message = await Message.create({
         id: randomUUID(),
         roomId,
@@ -164,7 +158,6 @@ async function createMessage({ roomId, senderId, text }) {
 }
 
 async function markRoomMessagesAsRead(roomId, userId) {
-    // Оновлюємо тільки чужі повідомлення, які цей користувач ще не читав.
     const messagesToUpdate = await Message.find({
         roomId,
         senderId: { $ne: userId },
@@ -195,7 +188,6 @@ async function markMessagesAsRead(roomId, userId) {
     return markRoomMessagesAsRead(roomId, userId);
 }
 
-// Редагувати й видаляти можна лише власне, ще не видалене повідомлення.
 async function findMutableMessage(messageId, userId) {
     const message = await Message.findOne({ id: messageId }).lean();
 
@@ -334,7 +326,6 @@ async function toggleMessageReaction({ messageId, userId, emoji }) {
     const hadSameReaction = Array.isArray(reactions[cleanEmoji]) &&
         reactions[cleanEmoji].includes(userId);
 
-    // Один користувач може мати лише одну активну реакцію на повідомлення.
     Object.keys(reactions).forEach(itemEmoji => {
         reactions[itemEmoji] = reactions[itemEmoji].filter(id => id !== userId);
 

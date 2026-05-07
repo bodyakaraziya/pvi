@@ -10,7 +10,6 @@ const {
 
 const router = express.Router();
 
-// Дзвіночок показує лише непрочитані сповіщення поточного користувача.
 router.get("/", requireApiAuth, async (req, res) => {
     const notifications = await getUserNotifications(req.user.id);
 
@@ -20,7 +19,6 @@ router.get("/", requireApiAuth, async (req, res) => {
     });
 });
 
-// Окреме сповіщення можна позначити прочитаним або видалити через UI дзвіночка.
 router.patch("/:id/read", requireApiAuth, async (req, res) => {
     const success = await markNotificationAsRead(req.params.id, req.user.id);
 
@@ -29,7 +27,6 @@ router.patch("/:id/read", requireApiAuth, async (req, res) => {
     });
 });
 
-// Коли користувач відкрив чат, усі сповіщення цієї кімнати прибираються.
 router.patch("/room/:roomId/read", requireApiAuth, async (req, res) => {
     await markRoomNotificationsAsRead(req.params.roomId, req.user.id);
 

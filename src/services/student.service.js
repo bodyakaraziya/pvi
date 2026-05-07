@@ -8,7 +8,6 @@ async function ensureInitialStudents() {
     await Student.seedInitial(memoryStore.students);
 }
 
-// Перетворюємо Mongoose document або plain object до однакового вигляду.
 function toPlainStudent(student) {
     if (!student) {
         return null;
@@ -21,7 +20,6 @@ function toPlainStudent(student) {
     return student;
 }
 
-// Безпечний DTO студента: пароль ніколи не виходить за межі service-шару.
 function getSafeStudent(student) {
     const plainStudent = toPlainStudent(student);
 
@@ -52,7 +50,6 @@ async function getPaginatedStudents(page = 1, limit = 5) {
     const normalizedLimit = Math.max(Number(limit) || 5, 1);
     const skip = (normalizedPage - 1) * normalizedLimit;
     const filter = {
-        // Admin потрібен для входу й системних чатів, але в таблиці студентів його не показуємо.
         role: { $ne: "admin" }
     };
 
@@ -79,7 +76,6 @@ async function findStudentById(id) {
     return Student.findOne({ id }).lean();
 }
 
-// Екрануємо текст перед створенням RegExp, щоб спецсимволи в імені не ламали пошук дублікатів.
 function escapeRegExp(value) {
     return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -119,7 +115,6 @@ async function validateStudent(data, excludeId = null) {
         group: String(data.group || "").trim()
     };
 
-    // Під час редагування поточного студента не вважаємо дублікатом самого себе.
     if (excludeId) {
         duplicateQuery.id = { $ne: excludeId };
     }
@@ -146,7 +141,6 @@ async function getNextStudentId() {
         .filter(Number.isFinite);
     const maxId = studentNumbers.length > 0 ? Math.max(...studentNumbers) : 0;
 
-    // ID має формат s1, s2, ..., тому беремо найбільший номер і додаємо одиницю.
     return `s${maxId + 1}`;
 }
 
@@ -174,7 +168,6 @@ async function createStudent(data) {
         status: "offline"
     });
 
-    // Після створення студента одразу створюємо direct-чат з адміністратором.
     await createDirectRoom("admin", student.id);
 
     return {
@@ -227,13 +220,11 @@ async function updateStudent(id, data) {
 }
 
 async function cleanRoomsAfterStudentDelete(ids) {
-    // Direct-чати зі студентом видаляємо повністю.
     await Room.deleteMany({
         type: "direct",
         participants: { $in: ids }
     });
 
-    // Із групових чатів видаляємо студента, але сам чат лишається, якщо учасників достатньо.
     await Room.updateMany(
         {
             type: "group",
@@ -246,7 +237,6 @@ async function cleanRoomsAfterStudentDelete(ids) {
         }
     );
 
-    // Якщо після видалення в групі залишився один або нуль учасників, така кімната вже не має сенсу.
     await Room.deleteMany({
         type: "group",
         $expr: {
