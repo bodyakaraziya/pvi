@@ -7,7 +7,7 @@ const memoryStore = {
             lastName: "",
             gender: "M",
             birthday: null,
-            password: "ad123",
+            seedPassword: "ad123",
             role: "admin",
             status: "offline"
         },
@@ -18,7 +18,7 @@ const memoryStore = {
             lastName: "Karaziia",
             gender: "M",
             birthday: "2007-06-12",
-            password: "2007-06-12",
+            seedPassword: "2007-06-12",
             role: "student",
             status: "offline"
         },
@@ -29,7 +29,7 @@ const memoryStore = {
             lastName: "Baranova",
             gender: "F",
             birthday: "2006-11-28",
-            password: "2006-11-28",
+            seedPassword: "2006-11-28",
             role: "student",
             status: "offline"
         }

@@ -1,6 +1,7 @@
 const memoryStore = require("../data/memoryStore");
 const Student = require("../models/Student");
 const Room = require("../models/Room");
+const { hashPassword } = require("../utils/password");
 
 const { createDirectRoom } = require("./room.service");
 
@@ -156,6 +157,7 @@ async function createStudent(data) {
         };
     }
 
+    const initialPassword = data.password === undefined ? data.birthday : data.password;
     const student = await Student.create({
         id: await getNextStudentId(),
         group: String(data.group || "").trim(),
@@ -163,7 +165,7 @@ async function createStudent(data) {
         lastName: String(data.lastName || "").trim(),
         gender: data.gender,
         birthday: data.birthday,
-        password: data.birthday,
+        passwordHash: await hashPassword(initialPassword),
         role: "student",
         status: "offline"
     });
@@ -206,8 +208,7 @@ async function updateStudent(id, data) {
                 firstName: data.firstName.trim(),
                 lastName: data.lastName.trim(),
                 gender: data.gender,
-                birthday: data.birthday,
-                password: data.birthday
+                birthday: data.birthday
             }
         },
         { new: true }

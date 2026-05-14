@@ -1,5 +1,5 @@
 const express = require("express");
-const { login } = require("../services/auth.service");
+const { changePassword, login, register } = require("../services/auth.service");
 const { requireApiAuth } = require("../middleware/auth.middleware");
 
 const router = express.Router();
@@ -30,6 +30,26 @@ router.post("/login", async (req, res) => {
         success: true,
         user: result.user
     });
+});
+
+router.post("/register", async (req, res) => {
+    const result = await register(req.body);
+
+    if (!result.success) {
+        return res.status(400).json(result);
+    }
+
+    return res.status(201).json(result);
+});
+
+router.post("/change-password", requireApiAuth, async (req, res) => {
+    const result = await changePassword(req.user.id, req.body);
+
+    if (!result.success) {
+        return res.status(400).json(result);
+    }
+
+    return res.json(result);
 });
 
 router.post("/logout", (req, res) => {
